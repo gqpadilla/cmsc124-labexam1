@@ -1,0 +1,1134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LISP Lab Reviewer</title>
+<style>
+:root{
+  --bg:#faf8f5; --panel:#ffffff; --ink:#1d1b19; --muted:#6b655e; --line:#e4ded6;
+  --accent:#b4441f; --accent-soft:#fbe9e1; --ok:#1f7a45; --ok-soft:#e3f4ea; --bad:#b3261e; --bad-soft:#fbe5e3;
+  --code-bg:#f3efe9; --mono:ui-monospace,"Cascadia Code",Consolas,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#161513; --panel:#1f1d1b; --ink:#ece7e1; --muted:#a39b92; --line:#34302c;
+    --accent:#f08a5d; --accent-soft:#3a2419; --ok:#5cc98a; --ok-soft:#173222; --bad:#f2867e; --bad-soft:#3a1c1a;
+    --code-bg:#272421;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#161513; --panel:#1f1d1b; --ink:#ece7e1; --muted:#a39b92; --line:#34302c;
+  --accent:#f08a5d; --accent-soft:#3a2419; --ok:#5cc98a; --ok-soft:#173222; --bad:#f2867e; --bad-soft:#3a1c1a;
+  --code-bg:#272421;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:5}
+header h1{font-size:18px;margin:0}
+header .meta{display:flex;gap:14px;align-items:center;font-size:14px;color:var(--muted)}
+.layout{display:grid;grid-template-columns:230px minmax(0,1fr) 400px;gap:0;min-height:calc(100vh - 56px)}
+nav{border-right:1px solid var(--line);padding:12px 8px;background:var(--panel)}
+nav h2{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:14px 8px 4px}
+nav button{display:flex;justify-content:space-between;gap:6px;width:100%;text-align:left;border:0;background:none;color:var(--ink);padding:7px 10px;border-radius:8px;font:inherit;font-size:14px;cursor:pointer}
+nav button:hover{background:var(--code-bg)}
+nav button.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+nav .cnt{color:var(--muted);font-size:12px;font-weight:400}
+main{padding:20px 28px 80px;max-width:900px;width:100%}
+main h2{font-size:24px;margin:0 0 8px}
+main h3{font-size:18px;margin:26px 0 6px}
+p{margin:8px 0}
+code{font-family:var(--mono);background:var(--code-bg);padding:1px 5px;border-radius:4px;font-size:.92em}
+pre.code{font-family:var(--mono);background:var(--code-bg);padding:12px 14px;border-radius:8px;overflow-x:auto;margin:10px 0 4px;font-size:14px;line-height:1.45;white-space:pre}
+.trybar{margin:0 0 12px}
+.btn{font:inherit;font-size:14px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:6px 12px;border-radius:8px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.small{font-size:12px;padding:3px 9px}
+.note{background:var(--accent-soft);border-left:3px solid var(--accent);padding:8px 12px;border-radius:6px;margin:12px 0}
+table{border-collapse:collapse;width:100%;margin:10px 0;font-size:14px}
+th,td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--code-bg)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin:16px 0}
+.card.passed{border-color:var(--ok)}
+.card h4{margin:0 0 4px;font-size:16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.badge{font-size:11px;padding:2px 7px;border-radius:99px;background:var(--code-bg);color:var(--muted);font-weight:600}
+.badge.ok{background:var(--ok-soft);color:var(--ok)}
+textarea{width:100%;font-family:var(--mono);font-size:14px;line-height:1.45;background:var(--code-bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px;resize:vertical;tab-size:2}
+textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px}
+.parens{font-size:12px;color:var(--muted);margin-left:auto}
+.parens.bad{color:var(--bad)}
+.results{margin-top:10px;font-family:var(--mono);font-size:13px}
+.results .r{padding:6px 8px;border-radius:6px;margin:4px 0;white-space:pre-wrap;word-break:break-word}
+.results .ok{background:var(--ok-soft)}
+.results .no{background:var(--bad-soft)}
+.results .fatal{background:var(--bad-soft);color:var(--bad)}
+details{margin-top:8px;font-size:14px}
+summary{cursor:pointer;color:var(--accent)}
+aside{border-left:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;position:sticky;top:56px;height:calc(100vh - 56px)}
+aside .head{padding:10px 12px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+aside .head b{font-size:14px}
+#log{flex:1;overflow:auto;padding:10px 12px;font-family:var(--mono);font-size:13px;white-space:pre-wrap;word-break:break-word}
+#log .in{color:var(--muted)}
+#log .val{color:var(--accent);font-weight:600}
+#log .err{color:var(--bad)}
+#log .warn{color:var(--muted);font-style:italic}
+aside .foot{padding:10px 12px;border-top:1px solid var(--line)}
+@media (max-width:1100px){
+  .layout{grid-template-columns:1fr}
+  nav{border-right:0;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:4px;padding:8px}
+  nav h2{width:100%;margin:6px 4px 0}
+  nav button{width:auto}
+  aside{position:static;height:520px;border-left:0;border-top:1px solid var(--line)}
+  main{padding:16px 16px 40px}
+}
+/* ---- UI polish layer ---- */
+:root{--shadow:0 1px 2px rgba(0,0,0,.04),0 6px 18px rgba(0,0,0,.05);
+  --hl-kw:#7b3fd1;--hl-st:#1f7a45;--hl-nu:#b35c00;--hl-cm:#8b857d;--p1:#b4441f;--p2:#2f6fb3;--p3:#1f7a45;--p4:#7b3fd1}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--shadow:0 1px 2px rgba(0,0,0,.3);
+  --hl-kw:#c4a3ff;--hl-st:#7fd6a0;--hl-nu:#f5b76a;--hl-cm:#8f877e;--p1:#f08a5d;--p2:#7fb2ef;--p3:#7fd6a0;--p4:#c4a3ff}}
+:root[data-theme="dark"]{--shadow:0 1px 2px rgba(0,0,0,.3);
+  --hl-kw:#c4a3ff;--hl-st:#7fd6a0;--hl-nu:#f5b76a;--hl-cm:#8f877e;--p1:#f08a5d;--p2:#7fb2ef;--p3:#7fd6a0;--p4:#c4a3ff}
+.kw{color:var(--hl-kw);font-weight:600}.st{color:var(--hl-st)}.nu{color:var(--hl-nu)}.cm{color:var(--hl-cm);font-style:italic}
+.q{color:var(--p1);font-weight:700}.p1{color:var(--p1)}.p2{color:var(--p2)}.p3{color:var(--p3)}.p4{color:var(--p4)}
+.progress{display:inline-block;width:120px;height:6px;background:var(--line);border-radius:99px;overflow:hidden;vertical-align:middle}
+.progress i{display:block;height:100%;width:0;background:var(--ok);transition:width .4s}
+.codewrap{position:relative}
+.codewrap pre.code{padding-right:110px;margin-bottom:14px}
+.codewrap .try{position:absolute;top:8px;right:8px}
+.card{box-shadow:var(--shadow);transition:border-color .2s}
+.card.passed{border-color:var(--ok);box-shadow:inset 0 3px 0 var(--ok),var(--shadow)}
+.summary{font:600 14px system-ui,sans-serif;margin:2px 0 6px}
+.summary.ok{color:var(--ok)}.summary.no{color:var(--bad)}
+.locked{font-size:13px;color:var(--muted);margin:8px 0 0}
+.btn{transition:border-color .15s,filter .15s;min-height:34px}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn:focus-visible,nav button:focus-visible,summary:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+nav .cnt.done{color:var(--ok);font-weight:700}
+.crumb{font-size:13px;color:var(--muted);margin-bottom:2px}
+.kbd{font-family:var(--mono);font-size:12px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;background:var(--panel)}
+.pager{display:flex;justify-content:space-between;gap:8px;margin-top:24px;flex-wrap:wrap}
+#navSelect{display:none}
+.toggleRepl{display:none}
+@media (max-width:1100px){
+  nav{display:none}
+  #navSelect{display:block;width:100%;margin:0 0 14px;font:inherit;padding:9px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
+  aside{position:fixed;left:0;right:0;bottom:0;top:auto;height:58vh;z-index:10;border-top:1px solid var(--line);box-shadow:0 -8px 24px rgba(0,0,0,.18)}
+  aside .head{cursor:pointer}
+  aside.collapsed{height:50px}
+  aside.collapsed #log,aside.collapsed .foot{display:none}
+  .toggleRepl{display:inline-block}
+  main{padding-bottom:90px}
+  header .meta{flex-wrap:wrap}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>LISP Lab Reviewer <span style="color:var(--muted);font-weight:400;font-size:14px">CMSC 124 · Labs 5–7</span></h1>
+  <div class="meta">
+    <label><input type="checkbox" id="strict" checked> Strict mode (slides-only built-ins)</label>
+    <span class="progress" aria-hidden="true"><i id="progBar"></i></span><span id="prog"></span>
+    <button class="btn small" id="theme" aria-label="Switch colour theme">◐ Auto</button>
+  </div>
+</header>
+<div class="layout">
+  <nav id="nav" aria-label="Sections"></nav>
+  <main id="main"></main>
+  <aside aria-label="Lisp REPL" id="replPane" class="collapsed">
+    <div class="head"><b>REPL (scratchpad)</b><span><button class="btn small" id="clr">Clear</button> <button class="btn small" id="rst">Reset vars</button> <button class="btn small toggleRepl" id="tog" aria-label="Show or hide the REPL">▴</button></span></div>
+    <div id="log" aria-live="polite"></div>
+    <div class="foot">
+      <textarea id="replIn" rows="4" spellcheck="false" placeholder="Type Lisp here, e.g. (+ 1 2 3)   — Ctrl+Enter to run"></textarea>
+      <div class="row"><button class="btn primary" id="runRepl">Run</button><span style="font-size:12px;color:var(--muted)"><span class="kbd">Ctrl</span>+<span class="kbd">Enter</span> run · <span class="kbd">↑</span><span class="kbd">↓</span> history</span><span class="parens" id="replParens"></span></div>
+    </div>
+  </aside>
+</div>
+
+<script>
+"use strict";
+/* ================= Mini Common Lisp interpreter ================= */
+class LispError extends Error{}
+class BlockReturn{constructor(name,value){this.name=name;this.value=value}}
+class Sym{constructor(n){this.name=n}}
+class Cons{constructor(a,d){this.car=a;this.cdr=d}}
+class LFloat{constructor(v){this.v=v}}
+class Fn{constructor(name,params,body,env){this.name=name;this.params=params;this.body=body;this.env=env}}
+const symtab=new Map();
+const intern=n=>{n=n.toUpperCase();let s=symtab.get(n);if(!s){s=new Sym(n);symtab.set(n,s)}return s};
+const NIL=intern('NIL'),T=intern('T'),QUOTE=intern('QUOTE'),FUNCTION=intern('FUNCTION'),LAMBDA=intern('LAMBDA');
+const err=m=>new LispError(m);
+const STEP_LIMIT=1_000_000, DEPTH_LIMIT=900, OUT_LIMIT=100_000;
+
+function arrToList(a,tail=NIL){let r=tail;for(let i=a.length-1;i>=0;i--)r=new Cons(a[i],r);return r}
+function listToArr(x,who){const a=[];let n=0;while(x instanceof Cons){a.push(x.car);x=x.cdr;if(++n>1e6)throw err('List too long (circular?)')}
+  if(x!==NIL&&who)throw err(`${who}: ${show(x)} is not a proper list`);return a}
+const bool=b=>b?T:NIL;
+
+/* ---- reader ---- */
+function tokenize(src){
+  src=src.replace(/[‘’`]/g,"'").replace(/[“”]/g,'"');
+  const t=[];let i=0;
+  while(i<src.length){
+    const c=src[i];
+    if(/\s/.test(c)){i++;continue}
+    if(c===';'){while(i<src.length&&src[i]!=='\n')i++;continue}
+    if(c==='('||c===')'||c==="'"){t.push(c);i++;continue}
+    if(c==='#'&&src[i+1]==="'"){t.push("#'");i+=2;continue}
+    if(c==='"'){let j=i+1,s='';while(j<src.length&&src[j]!=='"'){if(src[j]==='\\')j++;s+=src[j]??'';j++}
+      if(j>=src.length)throw err('Unterminated string — missing closing "');t.push({str:s});i=j+1;continue}
+    let j=i;while(j<src.length&&!/[\s()';"]/.test(src[j]))j++;
+    t.push(src.slice(i,j));i=j;
+  }
+  return t;
+}
+function parseAll(src){
+  const toks=tokenize(src);let p=0;
+  function read(){
+    if(p>=toks.length)throw err('Unexpected end of input — a ")" is missing.');
+    const t=toks[p++];
+    if(t==='('){const items=[];let tail=NIL;
+      for(;;){if(p>=toks.length)throw err('Missing ")" — your parentheses are not balanced.');
+        if(toks[p]===')'){p++;break}
+        if(toks[p]==='.'){p++;tail=read();if(toks[p]!==')')throw err('Bad dotted list');p++;break}
+        items.push(read())}
+      return arrToList(items,tail)}
+    if(t===')')throw err('Unexpected ")" — you have an extra closing parenthesis.');
+    if(t==="'")return arrToList([QUOTE,read()]);
+    if(t==="#'")return arrToList([FUNCTION,read()]);
+    if(typeof t==='object')return t.str;
+    if(/^[+-]?\d+\.?$/.test(t))return BigInt(t.replace('.',''));
+    if(/^[+-]?(\d+\.\d+|\.\d+|\d+(\.\d+)?e[+-]?\d+)$/i.test(t))return new LFloat(parseFloat(t));
+    return intern(t);
+  }
+  const out=[];while(p<toks.length)out.push(read());return out;
+}
+
+/* ---- printer ---- */
+function show(x,readably=true){
+  if(x instanceof Sym)return x.name;
+  if(typeof x==='bigint')return x.toString();
+  if(x instanceof LFloat){let s=String(x.v);if(Number.isFinite(x.v)&&!/[.e]/i.test(s))s+='.0';return s}
+  if(typeof x==='string')return readably?JSON.stringify(x):x;
+  if(x instanceof Cons){
+    if(x.car===QUOTE&&x.cdr instanceof Cons&&x.cdr.cdr===NIL)return "'"+show(x.cdr.car,readably);
+    const parts=[];let n=0;
+    while(x instanceof Cons){parts.push(show(x.car,readably));x=x.cdr;if(++n>5000){parts.push('...');x=NIL;break}}
+    if(x!==NIL)parts.push('.',show(x,readably));
+    return '('+parts.join(' ')+')';
+  }
+  if(x instanceof Fn)return `#<FUNCTION ${x.name?x.name.name:'LAMBDA'}>`;
+  if(x&&x.builtin)return `#<SYSTEM-FUNCTION ${x.name}>`;
+  return String(x);
+}
+
+/* ---- environment ---- */
+class Env{constructor(parent){this.vars=new Map();this.parent=parent}
+  find(s){let e=this;while(e){if(e.vars.has(s))return e;e=e.parent}return null}}
+
+const SPECIAL=new Map(), BUILTINS=new Map();
+const sp=(n,f)=>SPECIAL.set(intern(n),f);
+const B=(names,min,max,f)=>names.split(' ').forEach(n=>BUILTINS.set(intern(n),{builtin:f,min,max,name:n}));
+
+class Interp{
+  constructor(){this.fns=new Map();this.global=new Env(null);this.out='';this.steps=0;this.depth=0;this.notes=[]}
+  write(s){this.out+=s;if(this.out.length>OUT_LIMIT)throw err('Stopped: too much output — is there an infinite loop?')}
+  getFn(s){const u=this.fns.get(s);if(u)return u;const b=BUILTINS.get(s);if(b)return b;
+    if(SPECIAL.has(s))throw err(`${s.name} is a special form, not a function.`);
+    throw err(`Undefined function ${s.name}. (If (${s.name.toLowerCase()} ...) is data, put a quote ' in front of it.)`)}
+  eval(x,env){
+    if(++this.steps>STEP_LIMIT)throw err('Stopped: too many steps — is there an infinite loop?');
+    if(x instanceof Sym){
+      if(x===NIL||x===T||x.name[0]===':')return x;
+      const e=env.find(x);if(e)return e.vars.get(x);
+      throw err(`The variable ${x.name} is unbound.`);
+    }
+    if(!(x instanceof Cons))return x;
+    const h=x.car;let f;
+    if(h instanceof Sym){const s=SPECIAL.get(h);if(s)return s(this,listToArr(x.cdr),env);f=this.getFn(h)}
+    else if(h instanceof Cons&&h.car===LAMBDA)f=makeLambda(this,listToArr(h.cdr),env);
+    else throw err(`${show(h)} is not a function name. The first item of an evaluated list must be a function — did you forget a quote ' ?`);
+    const args=[];for(let p=x.cdr;p instanceof Cons;p=p.cdr)args.push(this.eval(p.car,env));
+    return this.apply(f,args);
+  }
+  apply(f,args){
+    if(f&&f.builtin){
+      if(args.length<f.min)throw err(`${f.name}: too few arguments (got ${args.length}, needs at least ${f.min})`);
+      if(f.max>=0&&args.length>f.max)throw err(`${f.name}: too many arguments (got ${args.length}, max ${f.max})`);
+      return f.builtin(args,this);
+    }
+    if(f instanceof Fn){
+      const nm=f.name?f.name.name:'LAMBDA',{req,opt,rest}=f.params;
+      if(args.length<req.length)throw err(`${nm}: too few arguments (got ${args.length}, needs ${req.length})`);
+      if(!rest&&args.length>req.length+opt.length)throw err(`${nm}: too many arguments (got ${args.length}, takes ${req.length+opt.length})`);
+      if(++this.depth>DEPTH_LIMIT){this.depth=0;throw err('Stack overflow: too many nested calls — is your base case missing or never reached?')}
+      try{
+        const env=new Env(f.env);let i=0;
+        for(const p of req)env.vars.set(p,args[i++]);
+        for(const [p,d] of opt)env.vars.set(p,i<args.length?args[i++]:this.eval(d,env));
+        if(rest)env.vars.set(rest,arrToList(args.slice(i)));
+        return this.block(f.name||f,()=>this.progn(f.body,env));
+      }finally{this.depth--}
+    }
+    throw err(`${show(f)} is not a function`);
+  }
+  block(name,th){try{return th()}catch(e){if(e instanceof BlockReturn&&e.name===name)return e.value;throw e}}
+  progn(forms,env){let v=NIL;for(const f of forms)v=this.eval(f,env);return v}
+  assign(s,v,env,who){
+    if(!(s instanceof Sym))throw err(`${who}: ${show(s)} is not a symbol.`);
+    if(s===T||s===NIL||s.name[0]===':')throw err(`${who}: Cannot assign to the constant ${s.name}.`);
+    (env.find(s)||this.global).vars.set(s,v);return v;
+  }
+  setPlace(pl,v,env){
+    if(pl instanceof Sym)return this.assign(pl,v,env,'SETF');
+    if(pl instanceof Cons&&pl.car instanceof Sym){
+      const n=pl.car.name,a=listToArr(pl.cdr);
+      const idx={CAR:0,FIRST:0,SECOND:1,THIRD:2,FOURTH:3,FIFTH:4,CADR:1,CADDR:2};
+      if(n in idx||n==='NTH'){
+        let k,c;if(n==='NTH'){k=Number(this.eval(a[0],env));c=this.eval(a[1],env)}else{k=idx[n];c=this.eval(a[0],env)}
+        for(let i=0;i<k;i++)c=c instanceof Cons?c.cdr:NIL;
+        if(!(c instanceof Cons))throw err(`SETF: the list is too short for (${n.toLowerCase()} ...)`);
+        c.car=v;return v;
+      }
+      if(n==='CDR'||n==='REST'){const c=this.eval(a[0],env);if(!(c instanceof Cons))throw err(`SETF: ${show(c)} is not a non-empty list`);c.cdr=v;return v}
+    }
+    throw err(`SETF: don't know how to set ${show(pl)}`);
+  }
+}
+
+function parseParams(pl,who){
+  if(!(pl===NIL||pl instanceof Cons))throw err(`${who}: the parameter list must be in parentheses, e.g. (defun square (x) (* x x))`);
+  const req=[],opt=[];let rest=null,mode=0;
+  for(const p of listToArr(pl,who)){
+    if(p===intern('&OPTIONAL')){mode=1;continue}
+    if(p===intern('&REST')){mode=2;continue}
+    if(mode===1){opt.push(p instanceof Cons?[p.car,p.cdr instanceof Cons?p.cdr.car:NIL]:[p,NIL]);continue}
+    if(!(p instanceof Sym)||p===T||p===NIL)throw err(`${who}: bad parameter ${show(p)} — parameters must be plain names`);
+    if(mode===2)rest=p;else req.push(p);
+  }
+  return {req,opt,rest};
+}
+const makeLambda=(I,a,env)=>new Fn(null,parseParams(a[0],'LAMBDA'),a.slice(1),env);
+
+/* ---- special forms ---- */
+sp('QUOTE',(I,a)=>a[0]);
+sp('FUNCTION',(I,a,env)=>a[0] instanceof Cons&&a[0].car===LAMBDA?makeLambda(I,listToArr(a[0].cdr),env):I.getFn(a[0]));
+sp('LAMBDA',(I,a,env)=>makeLambda(I,a,env));
+sp('SETQ',(I,a,env)=>{if(a.length%2)throw err('SETQ needs pairs: (setq variable value)');let v=NIL;
+  for(let i=0;i<a.length;i+=2){v=I.eval(a[i+1],env);I.assign(a[i],v,env,'SETQ')}return v});
+sp('SETF',(I,a,env)=>{if(a.length%2)throw err('SETF needs pairs: (setf place value)');let v=NIL;
+  for(let i=0;i<a.length;i+=2){v=I.eval(a[i+1],env);I.setPlace(a[i],v,env)}return v});
+sp('DEFUN',(I,a,env)=>{
+  const name=a[0];if(!(name instanceof Sym))throw err('DEFUN: the function name must be a symbol');
+  if(a.length<2)throw err('DEFUN: needs (defun name (params) body)');
+  if(BUILTINS.has(name))I.notes.push(`WARNING: you redefined the built-in ${name.name}. (The slides say: avoid this!)`);
+  I.fns.set(name,new Fn(name,parseParams(a[1],'DEFUN '+name.name),a.slice(2),env));return name});
+sp('DEFVAR',(I,a,env)=>{if(!I.global.vars.has(a[0]))I.assign(a[0],a.length>1?I.eval(a[1],env):NIL,I.global,'DEFVAR');return a[0]});
+sp('DEFPARAMETER',(I,a,env)=>{I.assign(a[0],I.eval(a[1],env),I.global,'DEFPARAMETER');return a[0]});
+sp('IF',(I,a,env)=>{
+  if(a.length<2||a.length>3)throw err(`IF takes (if test then else) — you gave it ${a.length} parts. Nest another IF or use COND for more branches.`);
+  return I.eval(a[0],env)!==NIL?I.eval(a[1],env):(a.length>2?I.eval(a[2],env):NIL)});
+sp('COND',(I,a,env)=>{for(const cl of a){if(!(cl instanceof Cons))throw err('COND: each clause must be a list like ((test) result)');
+  const v=I.eval(cl.car,env);if(v!==NIL)return cl.cdr===NIL?v:I.progn(listToArr(cl.cdr),env)}return NIL});
+sp('WHEN',(I,a,env)=>I.eval(a[0],env)!==NIL?I.progn(a.slice(1),env):NIL);
+sp('UNLESS',(I,a,env)=>I.eval(a[0],env)===NIL?I.progn(a.slice(1),env):NIL);
+sp('AND',(I,a,env)=>{let v=T;for(const f of a){v=I.eval(f,env);if(v===NIL)return NIL}return v});
+sp('OR',(I,a,env)=>{for(const f of a){const v=I.eval(f,env);if(v!==NIL)return v}return NIL});
+sp('PROGN',(I,a,env)=>I.progn(a,env));
+function letForm(seq){return (I,a,env)=>{
+  if(!(a[0]===NIL||a[0] instanceof Cons))throw err('LET: bindings must be a list, e.g. (let ((n 0)) body)');
+  const ne=new Env(env);
+  for(const b of listToArr(a[0])){
+    let s,v=NIL;
+    if(b instanceof Sym)s=b;
+    else if(b instanceof Cons){const p=listToArr(b);
+      if(p.length>2||!(p[0] instanceof Sym))throw err(`LET: bad binding ${show(b)}. Each binding is (name value) and the whole binding list closes before the body: (let ((n 0)) (loop ...))`);
+      s=p[0];v=p.length>1?I.eval(p[1],seq?ne:env):NIL}
+    else throw err(`LET: bad binding ${show(b)}`);
+    ne.vars.set(s,v);
+  }
+  return I.progn(a.slice(1),ne)}}
+sp('LET',letForm(false));sp('LET*',letForm(true));
+sp('BLOCK',(I,a,env)=>I.block(a[0],()=>I.progn(a.slice(1),env)));
+sp('RETURN',(I,a,env)=>{throw new BlockReturn(NIL,a.length?I.eval(a[0],env):NIL)});
+sp('RETURN-FROM',(I,a,env)=>{throw new BlockReturn(a[0],a.length>1?I.eval(a[1],env):NIL)});
+sp('LOOP',(I,a,env)=>{
+  if(a[0] instanceof Sym&&a[0]!==NIL)throw err(`This reviewer only supports the simple (loop body...) from the slides — not (loop ${a[0].name.toLowerCase()} ...). Use dotimes/dolist/do instead.`);
+  return I.block(NIL,()=>{for(;;)I.progn(a,env)})});
+sp('DOTIMES',(I,a,env)=>{
+  const spec=listToArr(a[0]||NIL);if(!(spec[0] instanceof Sym))throw err('DOTIMES: use (dotimes (var count) body)');
+  const n=I.eval(spec[1],env);if(typeof n!=='bigint')throw err(`DOTIMES: count ${show(n)} is not an integer`);
+  const ne=new Env(env);
+  return I.block(NIL,()=>{for(let i=0n;i<n;i++){ne.vars.set(spec[0],i);I.progn(a.slice(1),ne)}
+    ne.vars.set(spec[0],n);return spec.length>2?I.eval(spec[2],ne):NIL})});
+sp('DOLIST',(I,a,env)=>{
+  const spec=listToArr(a[0]||NIL);if(!(spec[0] instanceof Sym))throw err('DOLIST: use (dolist (var list) body)');
+  const items=listToArr(I.eval(spec[1],env),'DOLIST');const ne=new Env(env);
+  return I.block(NIL,()=>{for(const it of items){ne.vars.set(spec[0],it);I.progn(a.slice(1),ne)}
+    ne.vars.set(spec[0],NIL);return spec.length>2?I.eval(spec[2],ne):NIL})});
+function doForm(seq){return (I,a,env)=>{
+  if(!(a[0]===NIL||a[0] instanceof Cons))throw err('DO: first part must be a list of (var init step)');
+  if(!(a[1] instanceof Cons))throw err('DO: second part must be (end-test result), e.g. ((> i 10) \'done)');
+  const specs=listToArr(a[0]).map(s=>s instanceof Sym?[s]:listToArr(s));
+  const ne=new Env(env);
+  for(const s of specs)ne.vars.set(s[0],s.length>1?I.eval(s[1],seq?ne:env):NIL);
+  const [test,...res]=listToArr(a[1]);
+  return I.block(NIL,()=>{for(;;){
+    if(I.eval(test,ne)!==NIL)return I.progn(res,ne);
+    I.progn(a.slice(2),ne);
+    if(seq){for(const s of specs)if(s.length>2)ne.vars.set(s[0],I.eval(s[2],ne))}
+    else{const nv=specs.map(s=>s.length>2?I.eval(s[2],ne):undefined);specs.forEach((s,i)=>{if(s.length>2)ne.vars.set(s[0],nv[i])})}
+  }})}}
+sp('DO',doForm(false));sp('DO*',doForm(true));
+const incf=sign=>(I,a,env)=>{const d=a.length>1?I.eval(a[1],env):1n;return I.setPlace(a[0],sign>0?add2(I.eval(a[0],env),d):sub2(I.eval(a[0],env),d),env)};
+sp('INCF',incf(1));sp('DECF',incf(-1));
+sp('PUSH',(I,a,env)=>I.setPlace(a[1],new Cons(I.eval(a[0],env),I.eval(a[1],env)),env));
+sp('POP',(I,a,env)=>{const v=I.eval(a[0],env);I.setPlace(a[0],cdr('POP',v),env);return car('POP',v)});
+
+/* ---- numbers ---- */
+const isNum=x=>typeof x==='bigint'||x instanceof LFloat;
+const val=x=>x instanceof LFloat?x.v:x;
+const needNum=(w,x)=>{if(!isNum(x))throw err(`${w}: ${show(x)} is not a number`);return x};
+const needInt=(w,x)=>{if(typeof x!=='bigint')throw err(`${w}: ${show(x)} is not an integer`);return x};
+const num2=(a,b,op)=>typeof a==='bigint'&&typeof b==='bigint'?op(a,b):new LFloat(op(Number(val(a)),Number(val(b))));
+const add2=(a,b)=>num2(needNum('+',a),needNum('+',b),(p,q)=>p+q);
+const sub2=(a,b)=>num2(needNum('-',a),needNum('-',b),(p,q)=>p-q);
+// shortcut: non-exact integer division gives a float (CL would give a ratio like 7/2); fine for these labs
+const div2=(a,b)=>{needNum('/',a);needNum('/',b);
+  if(typeof a==='bigint'&&typeof b==='bigint'){if(b===0n)throw err('Division by zero');return a%b===0n?a/b:new LFloat(Number(a)/Number(b))}
+  if(Number(val(b))===0)throw err('Division by zero');return new LFloat(Number(val(a))/Number(val(b)))};
+B('+',0,-1,a=>a.reduce(add2,0n));
+B('*',0,-1,a=>a.reduce((s,x)=>num2(s,needNum('*',x),(p,q)=>p*q),1n));
+B('-',1,-1,a=>a.length===1?sub2(0n,a[0]):a.slice(1).reduce(sub2,needNum('-',a[0])));
+B('/',1,-1,a=>a.length===1?div2(1n,a[0]):a.slice(1).reduce(div2,a[0]));
+B('1+',1,1,a=>add2(a[0],1n));B('1-',1,1,a=>sub2(a[0],1n));
+const chain=(w,t)=>a=>{a.forEach(x=>needNum(w,x));for(let i=0;i+1<a.length;i++)if(!t(val(a[i]),val(a[i+1])))return NIL;return T};
+B('=',1,-1,chain('=',(p,q)=>p==q));B('<',1,-1,chain('<',(p,q)=>p<q));B('>',1,-1,chain('>',(p,q)=>p>q));
+B('<=',1,-1,chain('<=',(p,q)=>p<=q));B('>=',1,-1,chain('>=',(p,q)=>p>=q));
+B('/=',1,-1,a=>{a.forEach(x=>needNum('/=',x));for(let i=0;i<a.length;i++)for(let j=i+1;j<a.length;j++)if(val(a[i])==val(a[j]))return NIL;return T});
+B('MAX',1,-1,a=>a.reduce((m,x)=>val(needNum('MAX',x))>val(m)?x:m,needNum('MAX',a[0])));
+B('MIN',1,-1,a=>a.reduce((m,x)=>val(needNum('MIN',x))<val(m)?x:m,needNum('MIN',a[0])));
+B('ABS',1,1,a=>{const x=needNum('ABS',a[0]);return typeof x==='bigint'?(x<0n?-x:x):new LFloat(Math.abs(x.v))});
+B('MOD',2,2,a=>{const [x,y]=a;if(typeof x==='bigint'&&typeof y==='bigint'){if(y===0n)throw err('Division by zero');return ((x%y)+y)%y}
+  return new LFloat(((Number(val(x))%Number(val(y)))+Number(val(y)))%Number(val(y)))});
+B('REM',2,2,a=>num2(needNum('REM',a[0]),needNum('REM',a[1]),(p,q)=>{if(q==0)throw err('Division by zero');return p%q}));
+B('EXPT',2,2,a=>{const [b,e]=a.map(x=>needNum('EXPT',x));return typeof b==='bigint'&&typeof e==='bigint'&&e>=0n?b**e:new LFloat(Math.pow(Number(val(b)),Number(val(e))))});
+const fl=f=>a=>new LFloat(f(...a.map(x=>Number(val(needNum('MATH',x))))));
+B('SQRT',1,1,fl(Math.sqrt));B('EXP',1,1,fl(Math.exp));B('SIN',1,1,fl(Math.sin));B('COS',1,1,fl(Math.cos));B('TAN',1,1,fl(Math.tan));
+B('LOG',1,2,fl((x,b)=>b===undefined?Math.log(x):Math.log(x)/Math.log(b)));
+const rounder=(w,f,bi)=>a=>{const x=needNum(w,a[0]),d=a.length>1?needNum(w,a[1]):1n;
+  if(typeof x==='bigint'&&typeof d==='bigint'){if(d===0n)throw err('Division by zero');return bi(x,d)}
+  return BigInt(f(Number(val(x))/Number(val(d))))};
+B('FLOOR',1,2,rounder('FLOOR',Math.floor,(x,d)=>{let q=x/d;if(x%d!==0n&&((x<0n)!==(d<0n)))q-=1n;return q}));
+B('CEILING',1,2,rounder('CEILING',Math.ceil,(x,d)=>{let q=x/d;if(x%d!==0n&&((x<0n)===(d<0n)))q+=1n;return q}));
+B('TRUNCATE',1,2,rounder('TRUNCATE',Math.trunc,(x,d)=>x/d));
+B('ROUND',1,2,rounder('ROUND',Math.round,(x,d)=>BigInt(Math.round(Number(x)/Number(d)))));
+B('EVENP',1,1,a=>bool(needInt('EVENP',a[0])%2n===0n));B('ODDP',1,1,a=>bool(needInt('ODDP',a[0])%2n!==0n));
+B('ZEROP',1,1,a=>bool(val(needNum('ZEROP',a[0]))==0));B('PLUSP',1,1,a=>bool(val(needNum('PLUSP',a[0]))>0));B('MINUSP',1,1,a=>bool(val(needNum('MINUSP',a[0]))<0));
+B('NUMBERP',1,1,a=>bool(isNum(a[0])));B('INTEGERP',1,1,a=>bool(typeof a[0]==='bigint'));B('FLOATP',1,1,a=>bool(a[0] instanceof LFloat));
+
+/* ---- lists ---- */
+function car(w,x){if(x===NIL)return NIL;if(x instanceof Cons)return x.car;throw err(`${w}: ${show(x)} is not a list`)}
+function cdr(w,x){if(x===NIL)return NIL;if(x instanceof Cons)return x.cdr;throw err(`${w}: ${show(x)} is not a list`)}
+const nthc=(w,n,x)=>{for(let i=0;i<n;i++)x=cdr(w,x);return x};
+B('CAR',1,1,a=>car('CAR',a[0]));B('FIRST',1,1,a=>car('FIRST',a[0]));
+B('CDR',1,1,a=>cdr('CDR',a[0]));B('REST',1,1,a=>cdr('REST',a[0]));
+['SECOND','THIRD','FOURTH','FIFTH'].forEach((n,i)=>B(n,1,1,a=>car(n,nthc(n,i+1,a[0]))));
+['CAAR','CADR','CDAR','CDDR','CADDR','CDDDR','CADDDR'].forEach(n=>B(n,1,1,a=>{let x=a[0];for(const c of n.slice(1,-1).split('').reverse())x=c==='A'?car(n,x):cdr(n,x);return x}));
+B('CONS',2,2,a=>new Cons(a[0],a[1]));
+B('LIST',0,-1,a=>arrToList(a));
+B('LIST*',1,-1,a=>arrToList(a.slice(0,-1),a[a.length-1]));
+B('APPEND',0,-1,a=>{if(!a.length)return NIL;let r=a[a.length-1];for(let i=a.length-2;i>=0;i--)r=arrToList(listToArr(a[i],'APPEND'),r);return r});
+B('LENGTH',1,1,a=>typeof a[0]==='string'?BigInt(a[0].length):BigInt(listToArr(a[0],'LENGTH').length));
+B('REVERSE',1,1,a=>arrToList(listToArr(a[0],'REVERSE').reverse()));
+B('COPY-LIST',1,1,a=>arrToList(listToArr(a[0],'COPY-LIST')));
+B('NTH',2,2,a=>car('NTH',nthc('NTH',Number(needInt('NTH',a[0])),a[1])));
+B('NTHCDR',2,2,a=>nthc('NTHCDR',Number(needInt('NTHCDR',a[0])),a[1]));
+B('LAST',1,1,a=>{let x=a[0];while(x instanceof Cons&&x.cdr instanceof Cons)x=x.cdr;return x});
+B('BUTLAST',1,1,a=>arrToList(listToArr(a[0],'BUTLAST').slice(0,-1)));
+const eql=(a,b)=>a===b||(a instanceof LFloat&&b instanceof LFloat&&a.v===b.v);
+const equal=(a,b)=>eql(a,b)||(a instanceof Cons&&b instanceof Cons&&equal(a.car,b.car)&&equal(a.cdr,b.cdr));
+B('EQ',2,2,a=>bool(eql(a[0],a[1])));B('EQL',2,2,a=>bool(eql(a[0],a[1])));B('EQUAL',2,2,a=>bool(equal(a[0],a[1])));
+B('MEMBER',2,2,a=>{let x=a[1];while(x instanceof Cons){if(eql(a[0],x.car))return x;x=x.cdr}return NIL});
+B('REMOVE',2,2,a=>arrToList(listToArr(a[1],'REMOVE').filter(x=>!eql(a[0],x))));
+B('ATOM',1,1,a=>bool(!(a[0] instanceof Cons)));
+B('LISTP',1,1,a=>bool(a[0]===NIL||a[0] instanceof Cons));B('CONSP',1,1,a=>bool(a[0] instanceof Cons));
+B('NULL',1,1,a=>bool(a[0]===NIL));B('NOT',1,1,a=>bool(a[0]===NIL));B('ENDP',1,1,a=>bool(a[0]===NIL));
+B('SYMBOLP',1,1,a=>bool(a[0] instanceof Sym));B('STRINGP',1,1,a=>bool(typeof a[0]==='string'));
+B('FUNCTIONP',1,1,a=>bool(a[0] instanceof Fn||!!(a[0]&&a[0].builtin)));
+const fnOf=(I,f)=>f instanceof Sym?I.getFn(f):f;
+B('FUNCALL',1,-1,(a,I)=>I.apply(fnOf(I,a[0]),a.slice(1)));
+B('APPLY',2,-1,(a,I)=>I.apply(fnOf(I,a[0]),[...a.slice(1,-1),...listToArr(a[a.length-1],'APPLY')]));
+B('MAPCAR',2,-1,(a,I)=>{const f=fnOf(I,a[0]),ls=a.slice(1).map(l=>listToArr(l,'MAPCAR'));const n=Math.min(...ls.map(l=>l.length));
+  const r=[];for(let i=0;i<n;i++)r.push(I.apply(f,ls.map(l=>l[i])));return arrToList(r)});
+B('SET',2,2,(a,I)=>I.assign(a[0],a[1],I.global,'SET'));
+B('EVAL',1,1,(a,I)=>I.eval(a[0],I.global));
+B('IDENTITY',1,1,a=>a[0]);
+
+/* ---- output ---- */
+B('PRINT',1,1,(a,I)=>{I.write('\n'+show(a[0],true)+' ');return a[0]});
+B('PRIN1',1,1,(a,I)=>{I.write(show(a[0],true));return a[0]});
+B('PRINC',1,1,(a,I)=>{I.write(show(a[0],false));return a[0]});
+B('TERPRI',0,0,(a,I)=>{I.write('\n');return NIL});
+B('WRITE-LINE',1,1,(a,I)=>{I.write(show(a[0],false)+'\n');return a[0]});
+B('FORMAT',2,-1,(a,I)=>{
+  const [dest,ctl,...args]=a;if(typeof ctl!=='string')throw err('FORMAT: second argument must be a string');
+  let s='',k=0;
+  for(let i=0;i<ctl.length;i++){
+    if(ctl[i]!=='~'){s+=ctl[i];continue}
+    const d=(ctl[++i]||'').toUpperCase();
+    if(d==='%')s+='\n';else if(d==='&'){if(!(s||I.out).endsWith('\n')&&(s||I.out))s+='\n'}
+    else if(d==='~')s+='~';
+    else if('ADS'.includes(d)){if(k>=args.length)throw err('FORMAT: not enough arguments for the ~ directives');s+=show(args[k++],d==='S')}
+    else throw err(`FORMAT: directive ~${d} not supported here (use ~a ~d ~s ~%)`);
+  }
+  if(dest===NIL)return s;I.write(s);return NIL});
+
+/* ---- helpers for running code ---- */
+function errMsg(e){
+  if(e instanceof LispError)return e.message;
+  if(e instanceof RangeError)return 'Stack overflow: too many nested calls — is your base case missing or never reached?';
+  if(e instanceof BlockReturn)return 'RETURN used outside of a loop (it only works inside loop / dotimes / dolist / do / a defun body).';
+  return 'Internal error: '+(e&&e.message||e);
+}
+function runForms(I,src){ // returns {value, error}
+  I.steps=0;I.depth=0;let v=NIL;
+  try{for(const f of parseAll(src))v=I.eval(f,I.global);return {value:v}}
+  catch(e){return {error:errMsg(e)}}
+}
+
+/* ================= Content ================= */
+const BAN=['REVERSE','NTH','NTHCDR','LAST','BUTLAST','MAPCAR','APPLY','FUNCALL','REMOVE','MEMBER','COPY-LIST','LIST*'];
+
+const EX={}; const ex=o=>{EX[o.id]=o;return o.id};
+
+/* -- lesson drills -- */
+const D={
+ d0:ex({id:'d0',kind:'expr',title:'Arithmetic',prompt:'Write one expression that computes <b>3 + 4 × 5</b>.',require:['+','*'],
+   tests:[{expect:'23'}],hint:'Inner work goes in the inner list: the multiply is an argument to +.',solution:`(+ 3 (* 4 5))`}),
+ d0b:ex({id:'d0b',kind:'expr',title:'More arithmetic',prompt:'Compute <b>(10 − 4) ÷ 2</b>.',require:['-','/'],
+   tests:[{expect:'3'}],hint:'(/ (- ...) 2)',solution:`(/ (- 10 4) 2)`}),
+ d1:ex({id:'d1',kind:'expr',title:'setq',prompt:'Store <code>19</code> in <code>my-age</code>, then on the next line evaluate <code>my-age</code> plus 1.',require:['SETQ'],
+   tests:[{expect:'20'}],hint:'Two lines: a setq, then a (+ ...).',solution:`(setq my-age 19)\n(+ my-age 1)`}),
+ d2:ex({id:'d2',kind:'expr',title:'Quote + cons',prompt:'Build the list <code>(A B C D)</code> using <code>cons</code>.',require:['CONS'],
+   tests:[{expect:'(A B C D)'}],hint:'Quote both arguments so Lisp does not try to evaluate them.',solution:`(cons 'a '(b c d))`}),
+ d3a:ex({id:'d3a',kind:'expr',title:'list',prompt:'Using <code>list</code>, build <code>((A B) C)</code>.',require:['LIST'],
+   tests:[{expect:'((A B) C)'}],hint:'list takes each argument as one element.',solution:`(list '(a b) 'c)`}),
+ d3b:ex({id:'d3b',kind:'expr',title:'append',prompt:'Using <code>append</code>, join <code>(1 2)</code>, <code>(3 4)</code> and <code>(5)</code> into <code>(1 2 3 4 5)</code>.',require:['APPEND'],
+   tests:[{expect:'(1 2 3 4 5)'}],hint:'append can take more than two lists.',solution:`(append '(1 2) '(3 4) '(5))`}),
+ d4a:ex({id:'d4a',kind:'expr',title:'first / rest',prompt:'Get <code>C</code> out of <code>(a b c d)</code> using only <code>first</code> and <code>rest</code>.',require:['FIRST','REST'],ban:['SECOND','THIRD','NTH','CADDR'],
+   tests:[{expect:'C'}],hint:'Drop two elements with rest, then take the first.',solution:`(first (rest (rest '(a b c d))))`}),
+ d4b:ex({id:'d4b',kind:'expr',title:'Nested lists',prompt:'Get <code>D</code> out of <code>((a b) (c d))</code> using <code>first</code> and <code>rest</code>.',require:['FIRST','REST'],ban:['SECOND','THIRD','NTH','CADR','CADDR'],
+   tests:[{expect:'D'}],hint:'First get the sublist (c d), then take its second element.',solution:`(first (rest (first (rest '((a b) (c d))))))`}),
+ d5:ex({id:'d5',kind:'expr',title:'setf',prompt:'After the given setq, use <code>setf</code> so that <code>words</code> becomes <code>(THE LIST IS WORDS)</code>. End with <code>words</code> so its value is shown.',require:['SETF'],
+   starter:`(setq words '(a list of words))\n`,tests:[{expect:'(THE LIST IS WORDS)'}],hint:'Change the first and the third element.',
+   solution:`(setq words '(a list of words))\n(setf (first words) 'the)\n(setf (third words) 'is)\nwords`}),
+ d6:ex({id:'d6',kind:'expr',title:'Predicates',prompt:'Write an expression that returns <code>T</code> when the list <code>(a b)</code> is <i>not</i> empty, using <code>null</code> and <code>not</code>.',require:['NULL','NOT'],
+   tests:[{expect:'T'}],hint:'(null x) is T for an empty list. Flip it.',solution:`(not (null '(a b)))`}),
+ d7:ex({id:'d7',kind:'fn',title:'cube',prompt:'Define <code>(cube x)</code> that returns x³.',
+   tests:[{expr:'(cube 3)',expect:'27'},{expr:'(cube -2)',expect:'-8'},{expr:'(cube 0)',expect:'0'}],hint:'(* x x x)',solution:`(defun cube (x)\n  (* x x x))`}),
+ d7b:ex({id:'d7b',kind:'fn',title:'average',prompt:'Define <code>(average a b)</code> returning the average of two numbers.',
+   tests:[{expr:'(average 4 8)',expect:'6'},{expr:'(average 10 20)',expect:'15'}],hint:'Two parameters: (a b).',solution:`(defun average (a b)\n  (/ (+ a b) 2))`}),
+ d8:ex({id:'d8',kind:'fn',title:'sign with cond',prompt:'Define <code>(sign n)</code> returning <code>POSITIVE</code>, <code>NEGATIVE</code> or <code>ZERO</code>. Use <code>cond</code>.',require:['COND'],
+   tests:[{expr:'(sign 5)',expect:'POSITIVE'},{expr:'(sign -3)',expect:'NEGATIVE'},{expr:'(sign 0)',expect:'ZERO'}],
+   hint:'Last clause can be (t \'zero) — t is always true.',solution:`(defun sign (n)\n  (cond ((> n 0) 'positive)\n        ((< n 0) 'negative)\n        (t 'zero)))`}),
+ d8b:ex({id:'d8b',kind:'fn',title:'pass/fail with if',prompt:'Define <code>(grade score)</code>: <code>PASS</code> if score ≥ 75, else <code>FAIL</code>. Use <code>if</code>.',require:['IF'],
+   tests:[{expr:'(grade 90)',expect:'PASS'},{expr:'(grade 75)',expect:'PASS'},{expr:'(grade 74)',expect:'FAIL'}],hint:"(if test then else). Remember to quote 'pass.",solution:`(defun grade (score)\n  (if (>= score 75)\n      'pass\n      'fail))`}),
+ d9:ex({id:'d9',kind:'fn',title:'sum-list (recursion)',prompt:'Define <code>(sum-list lst)</code> that adds all numbers. The empty list sums to 0.',ban:BAN,
+   tests:[{expr:"(sum-list '(1 2 3 4 5))",expect:'15'},{expr:"(sum-list '())",expect:'0'},{expr:"(sum-list '(7))",expect:'7'}],
+   hint:'Base case: (null lst) → 0. Otherwise first + sum of the rest.',solution:`(defun sum-list (lst)\n  (if (null lst)\n      0\n      (+ (first lst) (sum-list (rest lst)))))`}),
+ d10:ex({id:'d10',kind:'expr',title:'dotimes',prompt:'Use <code>dotimes</code> to print the numbers 0 to 4, one per line.',require:['DOTIMES'],
+   tests:[{output:'0\n1\n2\n3\n4'}],hint:'(dotimes (i 5) ...)',solution:`(dotimes (i 5)\n  (print i))`}),
+};
+
+/* -- Lab 7 exercises -- */
+const LAB7=[
+ ex({id:'l1',kind:'fn',title:'1. my-reverse',prompt:"<code>(my-reverse '(a b c d e))</code> ⇒ <code>(E D C B A)</code>",ban:BAN,
+   tests:[{expr:"(my-reverse '(a b c d e))",expect:'(E D C B A)'},{expr:"(my-reverse '(1))",expect:'(1)'},{expr:"(my-reverse '())",expect:'NIL'},{expr:"(my-reverse '(1 (2 3) 4))",expect:'(4 (2 3) 1)'}],
+   hint:'Reverse the rest, then put the first element at the END: append it as a one-element list.',
+   solution:`(defun my-reverse (lst)\n  (if (null lst)\n      nil\n      (append (my-reverse (rest lst))\n              (list (first lst)))))`}),
+ ex({id:'l2',kind:'fn',title:'2. count-elements',prompt:"<code>(count-elements '(a (b c) d e))</code> ⇒ <code>5</code> — counts every atom, even inside sublists.",ban:[...BAN,'LENGTH'],
+   tests:[{expr:"(count-elements '(a (b c) d e))",expect:'5'},{expr:"(count-elements '())",expect:'0'},{expr:"(count-elements '((a (b)) c))",expect:'3'},{expr:"(count-elements '(a b))",expect:'2'}],
+   hint:'Three cases: empty → 0; first is an atom → 1 + count rest; first is a list → count(first) + count(rest).',
+   solution:`(defun count-elements (lst)\n  (cond ((null lst) 0)\n        ((atom (first lst))\n         (+ 1 (count-elements (rest lst))))\n        (t (+ (count-elements (first lst))\n              (count-elements (rest lst))))))`}),
+ ex({id:'l3',kind:'fn',title:'3. swap-first-second',prompt:"<code>(swap-first-second '(a b c d e))</code> ⇒ <code>(B A C D E)</code>",ban:BAN,
+   tests:[{expr:"(swap-first-second '(a b c d e))",expect:'(B A C D E)'},{expr:"(swap-first-second '(1 2))",expect:'(2 1)'}],
+   hint:'cons the second onto (cons the first onto the rest-of-the-rest).',
+   solution:`(defun swap-first-second (lst)\n  (cons (second lst)\n        (cons (first lst) (rest (rest lst)))))`}),
+ ex({id:'l4',kind:'fn',title:'4. middle-element',prompt:"<code>(middle-element '(a b c d e))</code> ⇒ <code>C</code> (odd-length lists)",ban:BAN,
+   tests:[{expr:"(middle-element '(a b c d e))",expect:'C'},{expr:"(middle-element '(1 2 3))",expect:'2'},{expr:"(middle-element '(x))",expect:'X'}],
+   hint:'Middle index = (floor (length lst) 2). Write a helper that walks n steps with rest, since nth is not allowed.',
+   solution:`(defun get-at (lst n)\n  (if (= n 0)\n      (first lst)\n      (get-at (rest lst) (- n 1))))\n\n(defun middle-element (lst)\n  (get-at lst (floor (length lst) 2)))`}),
+ ex({id:'l5',kind:'fn',title:'5. rotate',prompt:"<code>(rotate '(a b c d e))</code> ⇒ <code>(B C D E A)</code>",ban:BAN,
+   tests:[{expr:"(rotate '(a b c d e))",expect:'(B C D E A)'},{expr:"(rotate '(1 2))",expect:'(2 1)'},{expr:"(rotate '(x))",expect:'(X)'}],
+   hint:'The rest, with the first stuck on the end.',
+   solution:`(defun rotate (lst)\n  (append (rest lst) (list (first lst))))`}),
+];
+
+/* -- more write-a-function drills -- */
+const FN=[
+ ex({id:'p6',kind:'fn',title:'my-length',prompt:"<code>(my-length '(a b c))</code> ⇒ <code>3</code>. Don't use length.",ban:[...BAN,'LENGTH'],
+   tests:[{expr:"(my-length '(a b c))",expect:'3'},{expr:"(my-length '())",expect:'0'},{expr:"(my-length '((a b) c))",expect:'2'}],
+   hint:'Empty → 0, else 1 + length of rest.',solution:`(defun my-length (lst)\n  (if (null lst)\n      0\n      (+ 1 (my-length (rest lst)))))`}),
+ ex({id:'p7',kind:'fn',title:'my-last',prompt:"<code>(my-last '(a b c))</code> ⇒ <code>C</code>",ban:BAN,
+   tests:[{expr:"(my-last '(a b c))",expect:'C'},{expr:"(my-last '(x))",expect:'X'},{expr:"(my-last '(1 (2 3)))",expect:'(2 3)'}],
+   hint:'Stop when (rest lst) is empty.',solution:`(defun my-last (lst)\n  (if (null (rest lst))\n      (first lst)\n      (my-last (rest lst))))`}),
+ ex({id:'p8',kind:'fn',title:'factorial',prompt:'<code>(factorial 5)</code> ⇒ <code>120</code>, <code>(factorial 0)</code> ⇒ <code>1</code>',
+   tests:[{expr:'(factorial 5)',expect:'120'},{expr:'(factorial 0)',expect:'1'},{expr:'(factorial 20)',expect:'2432902008176640000'}],
+   hint:'n! = n × (n−1)!',solution:`(defun factorial (n)\n  (if (= n 0)\n      1\n      (* n (factorial (- n 1)))))`}),
+ ex({id:'p9',kind:'fn',title:'my-member',prompt:"<code>(my-member 'c '(a b c d))</code> ⇒ <code>T</code>, <code>(my-member 'z '(a b))</code> ⇒ <code>NIL</code>",ban:BAN,
+   tests:[{expr:"(my-member 'c '(a b c d))",expect:'T'},{expr:"(my-member 'z '(a b))",expect:'NIL'},{expr:"(my-member 'a '())",expect:'NIL'}],
+   hint:'Two parameters. Compare with equal.',solution:`(defun my-member (x lst)\n  (cond ((null lst) nil)\n        ((equal x (first lst)) t)\n        (t (my-member x (rest lst)))))`}),
+ ex({id:'p10',kind:'fn',title:'count-occurrences',prompt:"<code>(count-occurrences 'a '(a b a c a))</code> ⇒ <code>3</code>",ban:BAN,
+   tests:[{expr:"(count-occurrences 'a '(a b a c a))",expect:'3'},{expr:"(count-occurrences 'z '(a b))",expect:'0'}],
+   hint:'Like my-member, but add 1 on a match and keep going.',solution:`(defun count-occurrences (x lst)\n  (cond ((null lst) 0)\n        ((equal x (first lst))\n         (+ 1 (count-occurrences x (rest lst))))\n        (t (count-occurrences x (rest lst)))))`}),
+ ex({id:'p11',kind:'fn',title:'remove-item',prompt:"<code>(remove-item 'a '(a b a c))</code> ⇒ <code>(B C)</code>",ban:BAN,
+   tests:[{expr:"(remove-item 'a '(a b a c))",expect:'(B C)'},{expr:"(remove-item 'z '(a b))",expect:'(A B)'},{expr:"(remove-item 'a '())",expect:'NIL'}],
+   hint:'Building a list recursively = cons the kept element onto the recursive result.',solution:`(defun remove-item (x lst)\n  (cond ((null lst) nil)\n        ((equal x (first lst)) (remove-item x (rest lst)))\n        (t (cons (first lst) (remove-item x (rest lst))))))`}),
+ ex({id:'p12',kind:'fn',title:'my-append',prompt:"<code>(my-append '(a b) '(c d))</code> ⇒ <code>(A B C D)</code>. Don't use append.",ban:[...BAN,'APPEND'],
+   tests:[{expr:"(my-append '(a b) '(c d))",expect:'(A B C D)'},{expr:"(my-append '() '(x))",expect:'(X)'},{expr:"(my-append '(1) '())",expect:'(1)'}],
+   hint:'Recurse down the FIRST list only; when it is empty, return the second.',solution:`(defun my-append (a b)\n  (if (null a)\n      b\n      (cons (first a) (my-append (rest a) b))))`}),
+ ex({id:'p13',kind:'fn',title:'max-list',prompt:"<code>(max-list '(3 9 2 7))</code> ⇒ <code>9</code>",ban:BAN,
+   tests:[{expr:"(max-list '(3 9 2 7))",expect:'9'},{expr:"(max-list '(-5 -2 -8))",expect:'-2'},{expr:"(max-list '(4))",expect:'4'}],
+   hint:'One element → that element. Else (max first (max-list rest)).',solution:`(defun max-list (lst)\n  (if (null (rest lst))\n      (first lst)\n      (max (first lst) (max-list (rest lst)))))`}),
+ ex({id:'p14',kind:'fn',title:'evens-only',prompt:"<code>(evens-only '(1 2 3 4 5 6))</code> ⇒ <code>(2 4 6)</code>",ban:BAN,
+   tests:[{expr:"(evens-only '(1 2 3 4 5 6))",expect:'(2 4 6)'},{expr:"(evens-only '(1 3))",expect:'NIL'}],
+   hint:'Same shape as remove-item, but the test is evenp.',solution:`(defun evens-only (lst)\n  (cond ((null lst) nil)\n        ((evenp (first lst))\n         (cons (first lst) (evens-only (rest lst))))\n        (t (evens-only (rest lst)))))`}),
+ ex({id:'p15',kind:'fn',title:'flatten',prompt:"<code>(flatten '(a (b (c d)) e))</code> ⇒ <code>(A B C D E)</code>",ban:BAN,
+   tests:[{expr:"(flatten '(a (b (c d)) e))",expect:'(A B C D E)'},{expr:"(flatten '((1) 2 ((3))))",expect:'(1 2 3)'}],
+   hint:'Same 3 cases as count-elements, but build lists: cons for atoms, append for sublists.',solution:`(defun flatten (lst)\n  (cond ((null lst) nil)\n        ((atom (first lst))\n         (cons (first lst) (flatten (rest lst))))\n        (t (append (flatten (first lst))\n                   (flatten (rest lst))))))`}),
+ ex({id:'p16',kind:'fn',title:'fib',prompt:'<code>(fib 10)</code> ⇒ <code>55</code> (fib 0 = 0, fib 1 = 1)',
+   tests:[{expr:'(fib 0)',expect:'0'},{expr:'(fib 1)',expect:'1'},{expr:'(fib 10)',expect:'55'}],
+   hint:'Two base cases: n < 2 → n.',solution:`(defun fib (n)\n  (if (< n 2)\n      n\n      (+ (fib (- n 1)) (fib (- n 2)))))`}),
+];
+
+/* -- fix the broken code -- */
+const FIX=[
+ ex({id:'f1',kind:'fn',fix:true,title:'Missing quote',prompt:'Should return <code>A</code>. Run it, read the error, fix it.',
+   starter:`(defun first-of-abc ()\n  (first (a b c)))`,tests:[{expr:'(first-of-abc)',expect:'A'}],
+   hint:'Lisp is trying to call a function named A.',solution:`(defun first-of-abc ()\n  (first '(a b c)))`}),
+ ex({id:'f2',kind:'expr',fix:true,title:'Unquoted data in setq',prompt:'Should store the list and return its length, <code>3</code>.',
+   starter:`(setq colors (red green blue))\n(length colors)`,tests:[{expect:'3'}],
+   hint:'Same bug as before: data needs a quote.',solution:`(setq colors '(red green blue))\n(length colors)`}),
+ ex({id:'f3',kind:'fn',fix:true,title:'Extra parenthesis',prompt:'<code>(add-three 4)</code> should be <code>7</code>.',
+   starter:`(defun add-three (x)\n  (+ x 3)))`,tests:[{expr:'(add-three 4)',expect:'7'}],hint:'Count the closing parens. Watch the paren counter under the editor.',solution:`(defun add-three (x)\n  (+ x 3))`}),
+ ex({id:'f4',kind:'fn',fix:true,title:'Parameter list',prompt:'<code>(square 4)</code> should be <code>16</code>.',
+   starter:`(defun square x\n  (* x x))`,tests:[{expr:'(square 4)',expect:'16'}],hint:'Parameters always go inside their own list.',solution:`(defun square (x)\n  (* x x))`}),
+ ex({id:'f5',kind:'fn',fix:true,title:'No base case',prompt:"<code>(my-len '(a b c))</code> should be <code>3</code>.",ban:[...BAN,'LENGTH'],
+   starter:`(defun my-len (lst)\n  (+ 1 (my-len (rest lst))))`,tests:[{expr:"(my-len '(a b c))",expect:'3'},{expr:"(my-len '())",expect:'0'}],
+   hint:'(rest nil) is nil, so this never stops. When should it stop?',solution:`(defun my-len (lst)\n  (if (null lst)\n      0\n      (+ 1 (my-len (rest lst)))))`}),
+ ex({id:'f6',kind:'fn',fix:true,title:"Slide's sum fails on '()",prompt:"This is the <code>sum</code> from Lab 7. Make <code>(sum '())</code> return <code>0</code> while keeping <code>(sum '(1 2 3 4 5))</code> = 15.",ban:BAN,
+   starter:`(defun sum (mylist)\n  (if (null (rest mylist))\n      (car mylist)\n      (+ (car mylist) (sum (rest mylist)))))`,
+   tests:[{expr:"(sum '(1 2 3 4 5))",expect:'15'},{expr:"(sum '())",expect:'0'},{expr:"(sum '(9))",expect:'9'}],
+   hint:'(car nil) is NIL, not 0. Test (null mylist) instead and return 0.',solution:`(defun sum (mylist)\n  (if (null mylist)\n      0\n      (+ (car mylist) (sum (rest mylist)))))`}),
+ ex({id:'f7',kind:'fn',fix:true,title:'cons vs append',prompt:"<code>(add-to-end 'd '(a b c))</code> should be <code>(A B C D)</code>.",ban:BAN,
+   starter:`(defun add-to-end (item lst)\n  (cons lst item))`,tests:[{expr:"(add-to-end 'd '(a b c))",expect:'(A B C D)'},{expr:"(add-to-end 'x '())",expect:'(X)'}],
+   hint:'cons only adds to the FRONT. To add at the end: append with a one-element list.',solution:`(defun add-to-end (item lst)\n  (append lst (list item)))`}),
+ ex({id:'f8',kind:'fn',fix:true,title:'IF with too many parts',prompt:'Should return <code>POSITIVE</code>, <code>NEGATIVE</code> or <code>ZERO</code>.',
+   starter:`(defun classify (n)\n  (if (> n 0) 'positive (if (< n 0) 'negative) 'zero))`,
+   tests:[{expr:'(classify 5)',expect:'POSITIVE'},{expr:'(classify -2)',expect:'NEGATIVE'},{expr:'(classify 0)',expect:'ZERO'}],
+   hint:"'zero belongs INSIDE the inner if, as its else-part.",solution:`(defun classify (n)\n  (if (> n 0)\n      'positive\n      (if (< n 0) 'negative 'zero)))`}),
+ ex({id:'f9',kind:'fn',fix:true,title:'The slide typo in let',prompt:"This is the Lab 7 slide's <code>let</code>/<code>loop</code> example wrapped in a function. It should print <code>0 0</code>, <code>1 1</code>, <code>2 4</code> … <code>10 100</code>.",
+   starter:`(defun print-squares ()\n  (let ((n 0) (loop (when (> n 10) (return)) (print n) (prin1 (* n n)) (incf n)))))`,
+   tests:[{expr:'(print-squares)',output:'0 0\n1 1\n2 4\n3 9\n4 16\n5 25\n6 36\n7 49\n8 64\n9 81\n10 100'}],
+   hint:'The binding list ((n 0)) must close before (loop ...) starts.',solution:`(defun print-squares ()\n  (let ((n 0))\n    (loop\n      (when (> n 10) (return))\n      (print n)\n      (prin1 (* n n))\n      (incf n))))`}),
+ ex({id:'f10',kind:'fn',fix:true,title:'Off by one',prompt:'<code>(print-1-to-5)</code> should print 1, 2, 3, 4, 5.',
+   starter:`(defun print-1-to-5 ()\n  (dotimes (i 5)\n    (print i)))`,tests:[{expr:'(print-1-to-5)',output:'1\n2\n3\n4\n5'}],
+   hint:'dotimes counts from 0 to count−1.',solution:`(defun print-1-to-5 ()\n  (dotimes (i 5)\n    (print (+ i 1))))`}),
+ ex({id:'f11',kind:'fn',fix:true,title:'Loop that never ends',prompt:"<code>(countdown 3)</code> should print 3, 2, 1 and return <code>LIFTOFF</code>.",
+   starter:`(defun countdown (n)\n  (do ((i n (+ i 1)))\n      ((= i 0) 'liftoff)\n    (print i)))`,
+   tests:[{expr:'(countdown 3)',output:'3\n2\n1',expect:'LIFTOFF'}],hint:'Which way should i move to reach 0?',solution:`(defun countdown (n)\n  (do ((i n (- i 1)))\n      ((= i 0) 'liftoff)\n    (print i)))`}),
+ ex({id:'f12',kind:'fn',fix:true,title:'Too many firsts',prompt:"<code>(second-item '(a b c))</code> should be <code>B</code> (no <code>second</code> allowed).",ban:[...BAN,'SECOND','CADR'],
+   starter:`(defun second-item (lst)\n  (first (first (rest lst))))`,tests:[{expr:"(second-item '(a b c))",expect:'B'}],
+   hint:'(rest lst) is (b c). One first is enough.',solution:`(defun second-item (lst)\n  (first (rest lst)))`}),
+];
+
+/* -- loops & printing -- */
+const LOOP=[
+ ex({id:'o1',kind:'fn',title:'print-1-to-n (dotimes)',prompt:'<code>(print-1-to-n 5)</code> prints 1 to 5, one per line.',require:['DOTIMES'],
+   tests:[{expr:'(print-1-to-n 5)',output:'1\n2\n3\n4\n5'},{expr:'(print-1-to-n 2)',output:'1\n2'}],hint:'Print (+ i 1).',solution:`(defun print-1-to-n (n)\n  (dotimes (i n)\n    (print (+ i 1))))`}),
+ ex({id:'o2',kind:'fn',title:'print-items (dolist)',prompt:"<code>(print-items '(apple 2 \"pie\"))</code> prints each element on its own line.",require:['DOLIST'],
+   tests:[{expr:"(print-items '(apple 2 \"pie\"))",output:'APPLE\n2\n"pie"'}],hint:'(dolist (x lst) ...)',solution:`(defun print-items (lst)\n  (dolist (x lst)\n    (print x)))`}),
+ ex({id:'o3',kind:'fn',title:'print-evens (do)',prompt:"<code>(print-evens 10)</code> prints 2 4 6 8 10 (one per line) and returns <code>DONE</code>. Use <code>do</code>.",require:['DO'],
+   tests:[{expr:'(print-evens 10)',output:'2\n4\n6\n8\n10',expect:'DONE'},{expr:'(print-evens 5)',output:'2\n4',expect:'DONE'}],
+   hint:"(do ((i 2 (+ i 2))) ((> i n) 'done) (print i))",solution:`(defun print-evens (n)\n  (do ((i 2 (+ i 2)))\n      ((> i n) 'done)\n    (print i)))`}),
+ ex({id:'o4',kind:'fn',title:'sum-to-n (loop + return)',prompt:'<code>(sum-to-n 100)</code> ⇒ <code>5050</code>. Use <code>let</code> + plain <code>loop</code> + <code>return</code>.',require:['LOOP','RETURN','LET'],ban:['DOTIMES','DOLIST','DO'],
+   tests:[{expr:'(sum-to-n 100)',expect:'5050'},{expr:'(sum-to-n 0)',expect:'0'},{expr:'(sum-to-n 3)',expect:'6'}],
+   hint:'Keep i and total in a let. (when (> i n) (return total)) stops the loop and gives the answer.',
+   solution:`(defun sum-to-n (n)\n  (let ((i 1) (total 0))\n    (loop\n      (when (> i n) (return total))\n      (setq total (+ total i))\n      (setq i (+ i 1)))))`}),
+ ex({id:'o5',kind:'fn',title:'number-items (do, two vars)',prompt:"<code>(number-items '(foo bar baz))</code> prints <code>1 FOO</code>, <code>2 BAR</code>, <code>3 BAZ</code> and returns <code>DONE</code> (like the Lab 7 slide).",require:['DO'],
+   tests:[{expr:"(number-items '(foo bar baz))",output:'1 FOO\n2 BAR\n3 BAZ',expect:'DONE'}],
+   hint:'Step two variables at once: a counter and the list (rest l). print the number, prin1 the item.',
+   solution:`(defun number-items (lst)\n  (do ((i 1 (+ i 1))\n       (l lst (rest l)))\n      ((null l) 'done)\n    (print i)\n    (prin1 (first l))))`}),
+ ex({id:'o6',kind:'fn',title:'triangle (nested dotimes)',prompt:'<code>(triangle 3)</code> prints<br><code>*</code><br><code>**</code><br><code>***</code>',require:['DOTIMES'],
+   tests:[{expr:'(triangle 3)',output:'*\n**\n***'},{expr:'(triangle 1)',output:'*'}],
+   hint:'princ prints without quotes or newline; terpri prints a newline.',solution:`(defun triangle (n)\n  (dotimes (row n)\n    (dotimes (col (+ row 1))\n      (princ "*"))\n    (terpri)))`}),
+ ex({id:'o7',kind:'fn',title:'sum-evens (dolist + accumulator)',prompt:"<code>(sum-evens '(1 2 3 4 5 6))</code> ⇒ <code>12</code>",require:['DOLIST'],
+   tests:[{expr:"(sum-evens '(1 2 3 4 5 6))",expect:'12'},{expr:"(sum-evens '())",expect:'0'},{expr:"(sum-evens '(1 3))",expect:'0'}],
+   hint:'The 3rd item of the dolist spec is the return value: (dolist (x lst total) ...)',
+   solution:`(defun sum-evens (lst)\n  (let ((total 0))\n    (dolist (x lst total)\n      (when (evenp x)\n        (setq total (+ total x))))))`}),
+];
+
+/* -- lessons -- */
+const LESSONS=[
+{id:'L0',title:'0. How LISP works',parts:[
+ `<p>LISP = <b>LISt Processor</b> (John McCarthy, late 1950s). You type an expression at the prompt, the interpreter <b>reads</b> it, <b>evaluates</b> it, <b>prints</b> the value, and waits again: the <b>read-eval-print loop</b> (REPL).</p>
+  <p>The one rule that explains everything: <b>a list is a function call</b>. The first item is the function, the rest are its arguments. So math is written <i>prefix</i>:</p>`,
+ {code:`(+ 1 2 3 4)        ; 1+2+3+4 = 10
+(* 2 (+ 3 4))      ; 2 × (3+4) = 14
+(- 10 4)           ; 6
+(/ 12 4)           ; 3
+(max 3 9 2)        ; 9
+(sqrt 16)          ; 4.0
+(expt 2 10)        ; 1024`},
+ `<div class="note">Press <b>Try</b> on any code box to run it in the REPL on the right. Experiment there freely. Anything after <code>;</code> is a comment.</div>
+  <p>Arguments are evaluated <i>first</i>, inside-out: in <code>(* 2 (+ 3 4))</code> Lisp computes <code>(+ 3 4)</code> → 7, then <code>(* 2 7)</code>.</p>
+  <p>Lisp also upper-cases symbols when it prints them: you type <code>'hello</code>, it prints <code>HELLO</code>. That's normal.</p>`,
+ {drill:'d0'},{drill:'d0b'}]},
+{id:'L1',title:'1. Atoms & setq',parts:[
+ `<p>The two kinds of objects are <b>atoms</b> (symbols, numbers, strings…) and <b>lists</b>. The empty list <code>()</code> = <code>nil</code> is the one thing that is both.</p>
+  <p>When Lisp evaluates an atom it looks up its value. Numbers, <code>t</code> (true) and <code>nil</code> (false) evaluate to themselves. Other symbols need a value first. Give one with <code>setq</code>:</p>`,
+ {code:`(setq my-age 9)    ; => 9
+my-age             ; => 9
+your-age           ; ERROR: The variable YOUR-AGE is unbound.`},
+ `<p>You can't assign to the special atoms:</p>`,
+ {code:`(setq 1 2)         ; ERROR: 1 is not a symbol.
+(setq t nil)       ; ERROR: Cannot assign to the constant T.`},
+ {drill:'d1'}]},
+{id:'L2',title:'2. Quote',parts:[
+ `<p>Since every list is treated as a function call, how do you write a list as <i>data</i>? Try this:</p>`,
+ {code:`(cons a (b c d))   ; ERROR — Lisp tries to call a function named B`},
+ `<p>Put a single quote <code>'</code> in front of anything you do <b>not</b> want evaluated:</p>`,
+ {code:`'a                 ; => A
+'(b c d)           ; => (B C D)
+(cons 'a '(b c d)) ; => (A B C D)`},
+ `<p><code>'a</code> is short for <code>(quote a)</code>. And <code>setq</code> = "set quote": <code>(setq a 4)</code> is the same as <code>(set 'a 4)</code>, so the variable name needs no quote. The <i>value</i> does, if it is data: <code>(setq a '(a s d f))</code>.</p>
+  <div class="note"><b>Most common exam error:</b> forgetting a quote. If you see "Undefined function X" or "variable X is unbound" where X is part of your data, add a <code>'</code>.</div>`,
+ {drill:'d2'}]},
+{id:'L3',title:'3. cons, list, append',parts:[
+ `<p>Three ways to build lists. Learn the difference; it's on every exam.</p>
+  <table><tr><th>Function</th><th>What it does</th><th>Example</th><th>Result</th></tr>
+  <tr><td><code>cons</code></td><td>add <b>one item to the front</b> of a list (exactly 2 args)</td><td><code>(cons 'a '(b c))</code></td><td><code>(A B C)</code></td></tr>
+  <tr><td><code>list</code></td><td>make a list whose elements are the args, as they are</td><td><code>(list 'a '(b c))</code></td><td><code>(A (B C))</code></td></tr>
+  <tr><td><code>append</code></td><td>glue the <b>elements</b> of several lists together</td><td><code>(append '(a) '(b c))</code></td><td><code>(A B C)</code></td></tr></table>`,
+ {code:`(cons 1 nil)              ; => (1)
+(cons 1 (cons 2 nil))     ; => (1 2)
+(cons '(a) '(b))          ; => ((A) B)
+(list '(a) '(b))          ; => ((A) (B))
+(append '(a) '(b))        ; => (A B)
+(list 2 3 4)              ; => (2 3 4)
+(list 'a '(a s d f))      ; => (A (A S D F))`},
+ `<p>To add something at the <b>end</b>, wrap it in a list and append: <code>(append '(a b) (list 'c))</code> → <code>(A B C)</code>.</p>`,
+ {drill:'d3a'},{drill:'d3b'}]},
+{id:'L4',title:'4. first & rest',parts:[
+ `<p><code>first</code> (also called <code>car</code>) gives the first element. <code>rest</code> (also <code>cdr</code>) gives the list <i>without</i> its first element. <code>rest</code> always returns a list.</p>`,
+ {code:`(first '(a s d f))        ; => A
+(first '((a s) d f))      ; => (A S)
+(rest '(a s d f))         ; => (S D F)
+(rest '((a s) d f))       ; => (D F)
+(rest '((a s) (d f)))     ; => ((D F))
+(setq a '(a s d f))
+(first (rest a))          ; => S   (the 2nd element)
+(second a)                ; => S   (shortcut; also third)
+(first nil)               ; => NIL
+(rest '(x))               ; => NIL`},
+ `<p>Read nested calls inside-out: <code>(first (rest a))</code> = "first of (rest of a)".</p>`,
+ {drill:'d4a'},{drill:'d4b'}]},
+{id:'L5',title:'5. Changing values: setf',parts:[
+ `<p><code>cons</code>, <code>list</code>, <code>append</code> make <b>new</b> lists. They never change a variable:</p>`,
+ {code:`(setq a '(a s d f))
+(cons 'a a)               ; => (A A S D F)
+a                         ; => (A S D F)   unchanged!
+(setq a (cons 'a a))      ; store it to keep it
+a                         ; => (A A S D F)`},
+ `<p><code>setf</code> can set a variable <i>or a part of a list</i>:</p>`,
+ {code:`(setq words '(a list of words))
+(setf (first words) 'the)       ; => THE
+words                           ; => (THE LIST OF WORDS)
+(setf (third words) 'is)
+words                           ; => (THE LIST IS WORDS)
+(setf (rest words) '(game is up))
+words                           ; => (THE GAME IS UP)`},
+ {drill:'d5'}]},
+{id:'L6',title:'6. length & predicates',parts:[
+ `<p><code>length</code> counts the <i>top-level</i> elements. A <b>predicate</b> returns <code>T</code> or <code>NIL</code>.</p>`,
+ {code:`(setq a '(a a s d f))
+(length '(1 2 3))         ; => 3
+(length a)                ; => 5
+(length (append a a))     ; => 10
+(length '(append a a))    ; => 3   quoted: just a 3-element list!
+(length (list a a))       ; => 2
+(atom 'a)                 ; => T
+(atom a)                  ; => NIL
+(listp a)                 ; => T
+(null '())                ; => T   is it empty?
+(numberp 5)  (evenp 4)  (oddp 4)  (zerop 0)
+(= 3 3)                   ; numbers
+(equal '(a b) '(a b))     ; => T   lists / anything`},
+ `<table><tr><th>Predicate</th><th>T when…</th></tr>
+ <tr><td><code>atom</code></td><td>not a list (nil counts as an atom)</td></tr>
+ <tr><td><code>listp</code></td><td>a list (nil counts)</td></tr>
+ <tr><td><code>null</code></td><td>it is the empty list / nil</td></tr>
+ <tr><td><code>numberp evenp oddp zerop</code></td><td>number tests</td></tr>
+ <tr><td><code>= &lt; &gt; &lt;= &gt;=</code></td><td>number comparisons</td></tr>
+ <tr><td><code>equal</code> / <code>eq</code></td><td>same value / same symbol</td></tr>
+ <tr><td><code>and or not</code></td><td>combine tests</td></tr></table>`,
+ {drill:'d6'}]},
+{id:'L7',title:'7. defun & variables',parts:[
+ `<p><code>(defun name (parameters) body)</code>. The function returns the value of the <b>last form</b> in the body.</p>`,
+ {code:`(defun square (x)
+  (* x x))                ; => SQUARE
+(square 2)                ; => 4
+(square 7)                ; => 49
+(square 1 2)              ; ERROR: too many arguments`},
+ `<p><b>Local vs global.</b> Parameters are local: they disappear after the call and don't touch a global with the same name. A symbol that is not a parameter is looked up globally.</p>`,
+ {code:`(setq x 3)
+(square 345)              ; => 119025
+x                         ; => 3   untouched
+
+(defun y-plus (x)
+  (+ x y))                ; y is not a parameter → global
+(setq y 2)
+(y-plus 4)                ; => 6
+(setq y 27)
+(y-plus 43)               ; => 70`},
+ `<div class="note">The parameter list always needs parentheses, even for one or zero parameters: <code>(defun hello () 'hi)</code>. Don't redefine built-ins like <code>first</code> or <code>cons</code>.</div>`,
+ {drill:'d7'},{drill:'d7b'}]},
+{id:'L8',title:'8. if, cond, when',parts:[
+ `<p><code>(if test then else)</code>: exactly these 3 parts. Anything that isn't <code>NIL</code> counts as true.</p>`,
+ {code:`(if (> 5 3) 'bigger 'smaller)    ; => BIGGER
+(if (null '()) 'empty 'not-empty) ; => EMPTY`},
+ `<p>For more than two branches use <code>cond</code>: a list of <code>(test result)</code> clauses, checked top to bottom. <code>t</code> as the last test means "otherwise".</p>`,
+ {code:`(defun size (n)
+  (cond ((< n 10)  'small)
+        ((< n 100) 'medium)
+        (t         'large)))
+(size 5)    (size 50)    (size 500)`},
+ `<p><code>(when test body...)</code> runs the body only if test is true; <code>(unless test body...)</code> the opposite. Handy inside loops.</p>`,
+ {drill:'d8'},{drill:'d8b'}]},
+{id:'L9',title:'9. Recursion',parts:[
+ `<p>Most list functions on the exam follow one recipe:</p>
+ <ol><li><b>Base case</b>: what to return for the empty list (usually <code>(null lst)</code> → 0, <code>nil</code>, …).</li>
+ <li><b>Recursive case</b>: do something with <code>(first lst)</code> and call yourself on <code>(rest lst)</code>.</li></ol>`,
+ {code:`; COUNT pattern: return a number
+(defun my-length (lst)
+  (if (null lst)
+      0
+      (+ 1 (my-length (rest lst)))))
+
+; BUILD pattern: return a new list with cons
+(defun double-all (lst)
+  (if (null lst)
+      nil
+      (cons (* 2 (first lst)) (double-all (rest lst)))))
+
+(my-length '(a b c))     ; => 3
+(double-all '(1 2 3))    ; => (2 4 6)`},
+ `<p><b>Nested lists</b> need a third case: when <code>(first lst)</code> is itself a list, recurse into it too (that's how <code>count-elements</code> in Lab 7 works).</p>`,
+ {code:`(defun count-atoms (lst)
+  (cond ((null lst) 0)
+        ((atom (first lst)) (+ 1 (count-atoms (rest lst))))
+        (t (+ (count-atoms (first lst)) (count-atoms (rest lst))))))
+(count-atoms '(a (b c) d))   ; => 4`},
+ `<p>Trace <code>(my-length '(a b))</code>: = 1 + (my-length '(b)) = 1 + 1 + (my-length '()) = 1 + 1 + 0 = 2.</p>
+  <div class="note">No base case (or one that's never reached) = infinite recursion = "stack overflow".</div>`,
+ {drill:'d9'}]},
+{id:'L10',title:'10. Loops & printing',parts:[
+ `<p><b>Printing.</b> <code>print</code> = new line + value (strings keep quotes). <code>prin1</code> = value, no newline. <code>princ</code> = value without quotes, no newline. <code>terpri</code> = newline. <code>(format t "x = ~a~%" x)</code> = formatted, <code>~a</code> = value, <code>~%</code> = newline.</p>`,
+ {code:`(print "hi")  (prin1 "hi")  (princ "hi")  (terpri)
+(format t "Sum is ~a~%" (+ 2 3))`},
+ `<p><b>loop</b> repeats forever until <code>(return value)</code>. Use <code>let</code> for local variables and <code>incf</code> to add 1.</p>`,
+ {code:`(loop (print "Here I am.") (return 17) (print "I never got here."))
+
+(let ((n 0))
+  (loop
+    (when (> n 10) (return))
+    (print n)
+    (prin1 (* n n))
+    (incf n)))`},
+ `<p><b>dotimes</b>: counted loop from 0 to count−1. <b>dolist</b>: one pass per element.</p>`,
+ {code:`(dotimes (n 11) (print n) (prin1 (* n n)))
+
+(dolist (item '(1 2 4 5 9 17 25))
+  (if (evenp item)
+      (print (* item item))
+      (print (+ item 1))))`},
+ `<p><b>do</b>: <code>(do ((var init step) ...) (end-test result) body...)</code>. Each var starts at init and becomes step after every pass; when end-test is true it returns result.</p>`,
+ {code:`(do ((which 1 (1+ which))
+     (list '(foo bar baz qux) (rest list)))
+    ((null list) 'done)
+  (print which)
+  (prin1 (first list)))`},
+ `<p>An optional 3rd item in the dotimes/dolist spec is the return value: <code>(dolist (x lst total) ...)</code>.</p>`,
+ {drill:'d10'}]},
+{id:'L11',title:'11. Error messages',parts:[
+ `<p>Learn to read errors fast. That's what the "Fix broken code" section trains.</p>
+ <table><tr><th>Message</th><th>Usual cause</th><th>Fix</th></tr>
+ <tr><td>Undefined function A</td><td>A list of data was evaluated as a call: <code>(first (a b c))</code></td><td>Quote it: <code>'(a b c)</code></td></tr>
+ <tr><td>The variable X is unbound</td><td>Symbol used as data without quote, a typo, or never setq'd</td><td><code>'x</code>, fix spelling, or setq it</td></tr>
+ <tr><td>Missing ")" / Unexpected ")"</td><td>Unbalanced parentheses</td><td>Use the paren counter under each editor</td></tr>
+ <tr><td>too few / too many arguments</td><td>Call doesn't match the parameter list</td><td>Check <code>(defun f (a b) ...)</code> vs <code>(f 1)</code></td></tr>
+ <tr><td>X is not a list / not a number</td><td><code>(first 'a)</code>, <code>(+ 'a 1)</code></td><td>Check what each sub-expression returns</td></tr>
+ <tr><td>IF takes (if test then else)</td><td>4+ parts in an if</td><td>Nest ifs or use cond</td></tr>
+ <tr><td>Stack overflow</td><td>Recursion with no base case</td><td>Add <code>(if (null lst) ...)</code></td></tr>
+ <tr><td>too many steps / too much output</td><td>Infinite loop</td><td>Check the end test and the step direction</td></tr></table>
+ <p>Try these in the REPL and read the messages:</p>`,
+ {code:`(first (a b c))
+(+ 'a 1)
+(first 'a)
+(defun f (a b) (+ a b))
+(f 1)`}]},
+];
+
+const PRACTICE=[
+ {id:'P1',title:'Lab 7 exercises',intro:'The five exercises from the Lab 7 slides. Strict mode blocks shortcuts like <code>reverse</code>, <code>nth</code>, <code>last</code>, so you practise writing them from scratch.',items:LAB7},
+ {id:'P2',title:'Write functions',intro:'More exam-style recursion. Each one uses the recipe from lesson 9.',items:FN},
+ {id:'P3',title:'Fix broken code',intro:'Each starts with buggy code. Run the tests, read the error, fix it. <b>Reset</b> brings the bug back.',items:FIX},
+ {id:'P4',title:'Loops & printing',intro:'Output is compared line by line (spacing and letter case are ignored).',items:LOOP},
+];
+
+/* ================= Grading ================= */
+const normV=s=>String(s).replace(/\s+/g,' ').trim().toUpperCase();
+const clip=s=>s.length>200?s.slice(0,200)+' …':s;
+const normO=s=>s.split('\n').map(l=>l.trim().replace(/\s+/g,' ')).filter(Boolean).join('\n').toUpperCase();
+function walkSyms(x,set){if(x instanceof Sym)set.add(x.name);else if(x instanceof Cons){walkSyms(x.car,set);walkSyms(x.cdr,set)}}
+
+function grade(e,code,strict){
+  let forms;try{forms=parseAll(code)}catch(er){return {fatal:'Reader error: '+errMsg(er)}}
+  if(!forms.length)return {fatal:'Write some code first.'};
+  const used=new Set(),defined=new Set();
+  forms.forEach(f=>{walkSyms(f,used);if(f instanceof Cons&&f.car===intern('DEFUN')&&f.cdr.car instanceof Sym)defined.add(f.cdr.car.name)});
+  if(strict){const bad=(e.ban||[]).filter(n=>used.has(n)&&!defined.has(n));
+    if(bad.length)return {fatal:`Strict mode: not allowed here → ${bad.map(s=>s.toLowerCase()).join(', ')}. Build it from first/rest/cons/append/if/cond.`}}
+  const miss=(e.require||[]).filter(n=>!used.has(n));
+  if(miss.length)return {fatal:`This drill wants you to use: ${miss.map(s=>s.toLowerCase()).join(', ')}`};
+  const rows=[];
+  for(const t of e.tests){
+    const I=new Interp();
+    const ld=runForms(I,code);
+    if(ld.error){rows.push({ok:false,label:t.expr||'your code',msg:'Error: '+ld.error});continue}
+    let v=ld.value,out=I.out,er=null;
+    if(t.expr){I.out='';const r=runForms(I,t.expr);out=I.out;if(r.error)er=r.error;else v=r.value}
+    let ok=!er,msg='';
+    if(er)msg='Error: '+er+(out?`\n  printed so far: ${clip(normO(out).replace(/\n/g,' | '))}`:'');
+    else{
+      if(t.expect!==undefined){const g=show(v);if(normV(g)!==normV(t.expect)){ok=false}msg+=`expected ${t.expect}, got ${g}`}
+      if(t.output!==undefined){const g=normO(out),w=normO(t.output);if(g!==w)ok=false;
+        msg+=(msg?'\n  ':'')+`expected output: ${w.replace(/\n/g,' | ')}\n  your output:     ${g.replace(/\n/g,' | ')||'(nothing)'}`}
+    }
+    rows.push({ok,label:t.expr||'your code',msg});
+  }
+  return {rows,pass:rows.every(r=>r.ok)};
+}
+
+/* ================= UI ================= */
+const $=s=>document.querySelector(s);
+const store={get(){try{return JSON.parse(localStorage.getItem('lisp-rev-v1'))||{}}catch{return {}}},
+  set(d){try{localStorage.setItem('lisp-rev-v1',JSON.stringify(d))}catch{}}};
+const state=Object.assign({passed:{},drafts:{},tried:{},page:'L0',strict:true,theme:null},store.get());
+const save=()=>store.set(state);
+$('#strict').checked=state.strict;
+$('#strict').onchange=e=>{state.strict=e.target.checked;save()};
+
+/* theme: auto → light → dark */
+function applyTheme(){const r=document.documentElement;if(state.theme)r.dataset.theme=state.theme;else delete r.dataset.theme;
+  $('#theme').textContent=state.theme==='dark'?'☾ Dark':state.theme==='light'?'☀ Light':'◐ Auto'}
+$('#theme').onclick=()=>{state.theme=state.theme===null?'light':state.theme==='light'?'dark':null;save();applyTheme()};
+applyTheme();
+
+/* syntax highlighting for read-only code blocks (rainbow parens by depth) */
+const KW=new Set('DEFUN IF COND LET LET* LOOP DOTIMES DOLIST DO DO* SETQ SETF SET WHEN UNLESS RETURN LAMBDA AND OR NOT QUOTE PROGN INCF DECF'.split(' '));
+const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function hl(src){
+  let out='',d=0,m;const re=/(;[^\n]*)|("(?:\\.|[^"\\])*")|([()])|(['‘’])|([^\s()'‘’";]+)|(\s+)|([\s\S])/g;
+  while((m=re.exec(src))){
+    if(m[1])out+=`<span class="cm">${esc(m[1])}</span>`;
+    else if(m[2])out+=`<span class="st">${esc(m[2])}</span>`;
+    else if(m[3]){if(m[3]==='(')out+=`<span class="p${d++%4+1}">(</span>`;else{d=Math.max(0,d-1);out+=`<span class="p${d%4+1}">)</span>`}}
+    else if(m[4])out+=`<span class="q">'</span>`;
+    else if(m[5])out+=/^[+-]?\d+(\.\d+)?$/.test(m[5])?`<span class="nu">${m[5]}</span>`:KW.has(m[5].toUpperCase())?`<span class="kw">${esc(m[5])}</span>`:esc(m[5]);
+    else out+=esc(m[6]||m[7]);
+  }
+  return out;
+}
+
+/* page order + navigation */
+const PAGES=()=>[...LESSONS,...PRACTICE];
+const pageOf=id=>PAGES().find(p=>idsOf(p).includes(id));
+function goTo(pageId,exId){
+  state.page=pageId;save();renderPage();renderNav();
+  const el=exId&&document.getElementById('ex-'+exId);
+  if(el){el.scrollIntoView({behavior:'smooth',block:'start'});el.querySelector('textarea').focus({preventScroll:true})}else window.scrollTo(0,0);
+}
+function nextUnsolved(after){
+  const all=PAGES().flatMap(idsOf),i=all.indexOf(after);
+  return [...all.slice(i+1),...all.slice(0,i)].find(id=>!state.passed[id]);
+}
+
+function parenInfo(s){
+  let d=0,str=false,cm=false,extra=0;
+  for(const c of s.replace(/[“”]/g,'"')){
+    if(cm){if(c==='\n')cm=false;continue}
+    if(str){if(c==='"')str=false;continue}
+    if(c===';')cm=true;else if(c==='"')str=true;else if(c==='(')d++;else if(c===')'){if(d===0)extra++;else d--}
+  }
+  if(extra)return [`${extra} extra ")"`,true];
+  if(d)return [`${d} unclosed "("`,true];
+  return ['parens balanced ✓',false];
+}
+function wireEditor(ta,info,onRun){
+  const upd=()=>{const [t,b]=parenInfo(ta.value);info.textContent=t;info.classList.toggle('bad',b)};
+  ta.addEventListener('input',upd);upd();
+  ta.addEventListener('keydown',e=>{
+    if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();onRun();return}
+    if(e.key==='Enter'){ // keep indentation of the current line
+      const s=ta.selectionStart,line=ta.value.slice(0,s).split('\n').pop(),ind=line.match(/^\s*/)[0];
+      if(ind){e.preventDefault();ta.setRangeText('\n'+ind,s,ta.selectionEnd,'end');upd()}
+    }
+  });
+}
+
+/* REPL */
+let R=new Interp();
+const log=$('#log');
+function logLine(text,cls){const d=document.createElement('div');if(cls)d.className=cls;d.textContent=text;log.appendChild(d);log.scrollTop=log.scrollHeight}
+const pane=$('#replPane'),hist=[];let hi=0;
+const setPane=open=>{pane.classList.toggle('collapsed',!open);$('#tog').textContent=open?'▾':'▴'};
+pane.querySelector('.head').addEventListener('click',e=>{if(!e.target.closest('button')||e.target.id==='tog')setPane(pane.classList.contains('collapsed'))});
+function replRun(code){
+  if(!code.trim())return;
+  setPane(true);
+  if(hist[hist.length-1]!==code)hist.push(code);hi=hist.length;
+  logLine('> '+code.trim().replace(/\n/g,'\n  '),'in');
+  let forms;try{forms=parseAll(code)}catch(e){logLine(errMsg(e),'err');return}
+  for(const f of forms){
+    R.out='';R.steps=0;R.depth=0;R.notes=[];
+    try{const v=R.eval(f,R.global);if(R.out)logLine(R.out.replace(/^\n/,''));R.notes.forEach(n=>logLine(n,'warn'));logLine('=> '+show(v),'val')}
+    catch(e){if(R.out)logLine(R.out.replace(/^\n/,'').slice(0,2000));logLine('ERROR: '+errMsg(e),'err')}
+  }
+}
+const replIn=$('#replIn');
+const replSubmit=()=>{const c=replIn.value;replRun(c);if(c.trim()){replIn.value='';replIn.dispatchEvent(new Event('input'))}};
+wireEditor(replIn,$('#replParens'),replSubmit);
+$('#runRepl').onclick=replSubmit;
+replIn.addEventListener('keydown',e=>{ // shell-style history: ↑ at start of input, ↓ at end
+  if(e.key==='ArrowUp'&&replIn.selectionStart===0&&replIn.selectionEnd===0&&hi>0){e.preventDefault();replIn.value=hist[--hi]}
+  else if(e.key==='ArrowDown'&&replIn.selectionStart===replIn.value.length&&hi<hist.length){e.preventDefault();replIn.value=hist[++hi]??''}
+  else return;
+  replIn.dispatchEvent(new Event('input'));
+});
+$('#clr').onclick=()=>{log.innerHTML=''};
+$('#rst').onclick=()=>{R=new Interp();logLine(';; all variables and functions cleared','warn')};
+logLine(';; Welcome! Type Lisp below and press Ctrl+Enter.\n;; Variables and defuns stay until you press "Reset vars".','warn');
+
+/* exercise card */
+function card(e){
+  const c=document.createElement('div');c.className='card'+(state.passed[e.id]?' passed':'');c.id='ex-'+e.id;
+  const start=e.starter||'';
+  c.innerHTML=`<h4>${e.title} ${e.fix?'<span class="badge">fix</span>':''}<span class="badge ok" ${state.passed[e.id]?'':'hidden'}>✓ passed</span></h4>
+    <div>${e.prompt}</div>
+    <textarea rows="${Math.max(4,(state.drafts[e.id]??start).split('\n').length+1)}" spellcheck="false" aria-label="Code for ${e.title}" placeholder="${e.kind==='fn'?'(defun ...)':'Type your expression here'}"></textarea>
+    <div class="row"><button class="btn primary run">Run tests</button><button class="btn repl">Send to REPL</button>${e.starter?'<button class="btn reset">Reset</button>':''}<span class="parens"></span></div>
+    <div class="results" aria-live="polite"></div>
+    <details><summary>Hint</summary><p>${e.hint}</p></details>
+    <p class="locked" ${state.tried[e.id]?'hidden':''}>Answer unlocks after your first test run.</p>
+    <details class="ans" ${state.tried[e.id]?'':'hidden'}><summary>Show answer</summary><pre class="code"></pre></details>`;
+  const ta=c.querySelector('textarea');ta.value=state.drafts[e.id]??start;
+  c.querySelector('.ans pre').innerHTML=hl(e.solution);
+  ta.addEventListener('input',()=>{state.drafts[e.id]=ta.value;save()});
+  const res=c.querySelector('.results');
+  const run=()=>{
+    const g=grade(e,ta.value,state.strict);res.innerHTML='';
+    state.tried[e.id]=true;save();c.querySelector('.ans').hidden=false;c.querySelector('.locked').hidden=true;
+    const add=(cls,t,tag='div')=>{const d=document.createElement(tag);d.className=cls;d.textContent=t;res.appendChild(d);return d};
+    if(g.fatal){add('r fatal',g.fatal);return}
+    const n=g.rows.filter(r=>r.ok).length;
+    add('summary '+(g.pass?'ok':'no'),g.pass?`All ${n} tests passed`:`${n} of ${g.rows.length} tests passed`);
+    g.rows.forEach(r=>add('r '+(r.ok?'ok':'no'),(r.ok?'✓ ':'✗ ')+r.label+'\n  '+r.msg));
+    if(g.pass){
+      state.passed[e.id]=true;save();c.classList.add('passed');c.querySelector('.badge.ok').hidden=false;renderNav();
+      const nx=nextUnsolved(e.id);
+      if(nx){const b=add('btn primary','Next unsolved: '+EX[nx].title+' →','button');b.style.marginTop='6px';b.onclick=()=>goTo(pageOf(nx).id,nx)}
+    }
+    res.scrollIntoView({block:'nearest',behavior:'smooth'});
+  };
+  wireEditor(ta,c.querySelector('.parens'),run);
+  c.querySelector('.run').onclick=run;
+  c.querySelector('.repl').onclick=()=>replRun(ta.value);
+  const rb=c.querySelector('.reset');if(rb)rb.onclick=()=>{ta.value=e.starter;delete state.drafts[e.id];save();ta.dispatchEvent(new Event('input'))};
+  return c;
+}
+
+/* pages */
+const idsOf=p=>p.parts?p.parts.filter(x=>x.drill).map(x=>x.drill):p.items;
+function renderNav(){
+  const n=$('#nav');n.innerHTML='';
+  const sec=(t,list)=>{const h=document.createElement('h2');h.textContent=t;n.appendChild(h);
+    list.forEach(p=>{const ids=idsOf(p),done=ids.filter(i=>state.passed[i]).length;
+      const b=document.createElement('button');b.className=state.page===p.id?'on':'';
+      if(state.page===p.id)b.setAttribute('aria-current','page');
+      const full=ids.length&&done===ids.length;
+      b.innerHTML=`<span>${p.title}</span>${ids.length?`<span class="cnt${full?' done':''}">${full?'✓':done+'/'+ids.length}</span>`:''}`;
+      b.onclick=()=>goTo(p.id);n.appendChild(b)})};
+  sec('Lessons',LESSONS);sec('Practice',PRACTICE);
+  const all=Object.keys(EX),done=all.filter(i=>state.passed[i]).length;
+  $('#prog').textContent=`${done}/${all.length} solved`;
+  $('#progBar').style.width=(100*done/all.length)+'%';
+}
+function renderPage(){
+  const m=$('#main');m.innerHTML='';
+  const pages=PAGES(),p=pages.find(x=>x.id===state.page)||LESSONS[0];
+  // phone navigation: a single dropdown instead of the sidebar
+  const sel=document.createElement('select');sel.id='navSelect';sel.setAttribute('aria-label','Go to section');
+  for(const [lbl,list] of [['Lessons',LESSONS],['Practice',PRACTICE]]){const g=document.createElement('optgroup');g.label=lbl;
+    list.forEach(q=>{const ids=idsOf(q),done=ids.filter(i=>state.passed[i]).length;const o=new Option(q.title+(ids.length?` (${done}/${ids.length})`:''),q.id,false,q.id===p.id);g.appendChild(o)});sel.appendChild(g)}
+  sel.onchange=()=>goTo(sel.value);m.appendChild(sel);
+  const crumb=document.createElement('div');crumb.className='crumb';
+  crumb.textContent=LESSONS.includes(p)?`Lesson ${LESSONS.indexOf(p)+1} of ${LESSONS.length}`:'Practice';m.appendChild(crumb);
+  const h=document.createElement('h2');h.textContent=p.title;m.appendChild(h);
+  if(p.parts){
+    let drillHead=false;
+    for(const part of p.parts){
+      if(typeof part==='string'){const d=document.createElement('div');d.innerHTML=part;m.appendChild(d)}
+      else if(part.code){const w=document.createElement('div');w.className='codewrap';
+        const pre=document.createElement('pre');pre.className='code';pre.innerHTML=hl(part.code);
+        const b=document.createElement('button');b.className='btn small try';b.textContent='▶ Try';b.setAttribute('aria-label','Run this example in the REPL');
+        b.onclick=()=>replRun(part.code);w.append(pre,b);m.appendChild(w)}
+      else if(part.drill){if(!drillHead){const h3=document.createElement('h3');h3.textContent='Your turn';m.appendChild(h3);drillHead=true}m.appendChild(card(EX[part.drill]))}
+    }
+  }else{
+    const d=document.createElement('p');d.innerHTML=p.intro;m.appendChild(d);
+    p.items.forEach(id=>m.appendChild(card(EX[id])));
+  }
+  const i=pages.indexOf(p),pager=document.createElement('div');pager.className='pager';
+  [[pages[i-1],'← '],[pages[i+1],'']].forEach(([q,arrow],k)=>{
+    if(!q){pager.appendChild(document.createElement('span'));return}
+    const b=document.createElement('button');b.className='btn'+(k?' primary':'');b.textContent=k?`Next: ${q.title} →`:`${arrow}${q.title}`;
+    b.onclick=()=>goTo(q.id);pager.appendChild(b)});
+  m.appendChild(pager);
+}
+renderNav();renderPage();
+
+/* ================= Self-test (open with #selftest) ================= */
+function selfTest(){
+  const fails=[];
+  const chk=(src,want)=>{const I=new Interp();const r=runForms(I,src);const got=r.error?'ERR':show(r.value);if(normV(got)!==normV(want))fails.push(`${src} → ${got}, want ${want}`)};
+  chk('(+ 1 2 3 4)','10');chk('(cons 1 (cons 2 nil))','(1 2)');chk("(list 'a '(a s d f))",'(A (A S D F))');
+  chk("(rest '((a s) (d f)))",'((D F))');chk("(setq a '(a a s d f)) (length '(append a a))",'3');chk("(setq a '(a s d f)) (length (list a a))",'2');
+  chk('(setq 1 2)','ERR');chk('(setq t nil)','ERR');chk("(atom 'a)",'T');chk("(listp 'a)",'NIL');chk('(sqrt 16)','4.0');chk('(/ 12 4)','3');
+  chk("(setq words '(a list of words)) (setf (rest words) '(game is up)) words",'(A GAME IS UP)');
+  chk('(defun y-plus (x) (+ x y)) (setq y 27) (y-plus 43)','70');chk('(expt 2 100)','1267650600228229401496703205376');
+  chk("(loop (return 17))",'17');chk("(cons 'a (b c d))",'ERR');chk('(if 1 2 3 4)','ERR');chk('(format nil "a~ab" 1)','"a1b"');
+  for(const e of Object.values(EX)){
+    const g=grade(e,e.solution,true);
+    if(g.fatal||!g.pass)fails.push(`${e.id} solution fails: ${g.fatal||g.rows.filter(r=>!r.ok).map(r=>r.msg).join('; ')}`);
+    if(e.fix){const b=grade(e,e.starter,false);if(b.pass)fails.push(`${e.id} buggy starter passes`)}
+  }
+  return fails;
+}
+window.selfTest=selfTest;
+if(location.hash==='#selftest'){const f=selfTest();logLine(f.length?'SELFTEST FAILURES:\n'+f.join('\n'):'SELFTEST: all passed',f.length?'err':'val')}
+</script>
+</body>
+</html>
